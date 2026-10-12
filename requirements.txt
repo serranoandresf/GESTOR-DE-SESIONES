@@ -1,0 +1,2 @@
+# Solo usa la biblioteca estándar de Python (tkinter incluido en el instalador oficial).
+# Únicamente para crear el .exe: pyinstaller

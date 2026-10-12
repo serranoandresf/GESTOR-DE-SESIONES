@@ -1,0 +1,10 @@
+{
+  "_nota": "Copia este archivo como mis_cuentas.json y pon tus correos (solo correos, nunca contraseñas).",
+  "Grupo 1": [
+    "cuenta1@gmail.com",
+    "cuenta2@gmail.com"
+  ],
+  "Grupo 2": [
+    "cuenta3@gmail.com"
+  ]
+}
