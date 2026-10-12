@@ -1,0 +1,48 @@
+name: Crear instalador de Windows
+
+# Se ejecuta al publicar una versión (etiqueta v*, por ejemplo v2.0.0) o a mano desde la pestaña Actions.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  instalador:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pruebas
+        run: python -m unittest discover -s tests
+      - name: Leer versión
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path gestor_sesiones/__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Construir el .exe
+        run: |
+          python -m pip install pyinstaller
+          python -m PyInstaller --noconsole --onefile --name GestorSesiones --icon gestor_sesiones/recursos/icono.ico --add-data "gestor_sesiones/recursos;gestor_sesiones/recursos" main.py
+      - name: Construir el instalador (Inno Setup)
+        env:
+          APP_VERSION: ${{ steps.ver.outputs.version }}
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc installer/GestorSesiones.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GestorSesiones-Setup
+          path: dist_installer/*.exe
+      - name: Publicar en Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist_installer/*.exe

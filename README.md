@@ -16,8 +16,8 @@ tienes cada proyecto y de qué se trata**. Nada más: no se conecta a ninguna IA
 
 **B) Desde el código (necesita Python 3.10+ con «tcl/tk»)**
 ```powershell
-git clone https://github.com/TU_USUARIO/TU_REPO.git
-cd TU_REPO
+git clone https://github.com/serranoandresf/GESTOR-DE-SESIONES.git
+cd GESTOR-DE-SESIONES
 .\Instalar.bat        # copia la app a %LOCALAPPDATA%\Programs\GestorSesiones y crea los accesos con icono
 ```
 Para actualizar: `git pull` y otra vez `.\Instalar.bat`. Tus datos no se tocan.
