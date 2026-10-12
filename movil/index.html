@@ -3,60 +3,163 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f6feb">
-<title>Mis correos y proyectos</title>
+<title>Correos y proyectos</title>
+<meta name="description" content="Qué correo tiene cada proyecto y de qué se trata.">
+<meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icono-192.png">
+<link rel="icon" type="image/png" href="icono-192.png">
 <link rel="apple-touch-icon" href="icono-192.png">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Correos">
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--ln:#e3e6ea;--ac:#1f6feb;--acx:#fff;--ok:#1a7f37;--bad:#cf222e}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#1a2028;--tx:#e8ecf1;--mut:#97a3b3;--ln:#2b3440;--ac:#4c8dff;--acx:#06121f;--ok:#3fb950;--bad:#ff6b6b}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:90px}
-header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px 8px;border-bottom:1px solid var(--ln)}
-h1{font-size:18px;margin:0 0 8px}
-input,textarea,select{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:12px}
-textarea{min-height:90px;resize:vertical}
-label{display:block;font-size:13px;color:var(--mut);margin:14px 0 4px}
-main{padding:8px 16px}
-.grupo{margin:18px 0 6px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
-.correo{background:var(--card);border:1px solid var(--ln);border-radius:12px;margin-bottom:10px;overflow:hidden}
-.chead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--ln)}
-.chead .em{flex:1;font-weight:600;word-break:break-all}
-.chead .n{color:var(--mut);font-size:13px}
-button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:var(--acx);font-weight:600}
-button.sec{background:transparent;color:var(--ac);border:1px solid var(--ln)}
-button.mal{background:transparent;color:var(--bad);border:1px solid var(--ln)}
-button.mini{padding:6px 10px;font-size:14px}
-.proy{padding:11px 14px;border-top:1px solid var(--ln);display:block;width:100%;text-align:left;background:transparent;color:var(--tx);border-radius:0;font-weight:400}
-.proy:first-of-type{border-top:0}
-.proy b{display:block}
-.proy span{color:var(--mut);font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vacio{padding:10px 14px;color:var(--mut);font-size:14px}
-.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));box-shadow:0 4px 14px rgba(0,0,0,.25);padding:14px 20px;border-radius:999px}
-.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.panel{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:16px;margin:16px 0}
-.panel h2{margin:0 0 6px;font-size:17px}
-.mut{color:var(--mut);font-size:14px}
-#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90%}
-#toast.on{opacity:1}
-.hide{display:none}
+/* Sistema de diseño: papel frío y tinta, un solo color de acento, superficies planas. */
+:root{
+  color-scheme: light dark;
+  --bg: light-dark(#f2f2f7, #000000);
+  --s1: light-dark(#ffffff, #1c1c1e);
+  --s2: light-dark(#f2f2f7, #2c2c2e);
+  --s3: light-dark(#e5e5ea, #3a3a3c);
+  --tx: light-dark(#000000, #ffffff);
+  --mu: light-dark(#636366, #98989f);
+  --bd: light-dark(#d1d1d6, #38383a);
+  --accent: #0071e3;
+  --accent-tx: light-dark(#0062c4, #64acff);
+  --on-accent: #ffffff;
+  --ok: light-dark(#126c37, #30d158);
+  --wn: light-dark(#9a4a08, #ff9f0a);
+  --er: light-dark(#bd241d, #ff6961);
+  --r1: 12px; --r2: 18px;
+  --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
+  --top-h: 56px; --nav-h: 64px; --rail: 224px;
+  --font: -apple-system, "SF Pro Text", BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 var(--font);-webkit-font-smoothing:antialiased;letter-spacing:-.006em;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em}
+
+.top{position:sticky;top:0;z-index:20;padding-top:var(--sat);background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:saturate(1.5) blur(18px);-webkit-backdrop-filter:saturate(1.5) blur(18px);border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent)}
+.top-in{max-width:760px;margin:0 auto;height:var(--top-h);padding:0 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;letter-spacing:-.03em;margin:0}
+.brand .mk{width:28px;height:28px;border-radius:9px;background:var(--tx);color:var(--bg);display:grid;place-items:center}
+.brand .mk .ic{width:16px;height:16px;stroke-width:2.6}
+main{max-width:760px;margin:0 auto;padding:14px 16px calc(var(--nav-h) + var(--sab) + 32px);outline:0}
+
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:space-around;padding:6px 8px calc(6px + var(--sab));background:color-mix(in srgb,var(--s1) 88%,transparent);backdrop-filter:saturate(1.5) blur(18px);-webkit-backdrop-filter:saturate(1.5) blur(18px);border-top:1px solid color-mix(in srgb,var(--bd) 70%,transparent)}
+.nav-brand{display:none}
+.nav button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;border:0;background:transparent;color:var(--mu);font-size:11px;font-weight:600;line-height:1.1;cursor:pointer;border-radius:14px}
+.nav .nv{display:grid;place-items:center;width:54px;height:30px;border-radius:999px;transition:background .2s}
+.nav .ic{width:22px;height:22px}
+.nav button[aria-current="page"]{color:var(--tx)}
+.nav button[aria-current="page"] .nv{background:var(--accent);color:var(--on-accent)}
+@media (min-width:900px){
+  #app{padding-left:var(--rail)}
+  .nav{top:0;right:auto;bottom:0;width:var(--rail);flex-direction:column;justify-content:flex-start;gap:4px;padding:calc(18px + var(--sat)) 14px 18px;border-top:0;border-right:1px solid var(--bd);background:var(--s1)}
+  .nav-brand{display:flex;margin:0 6px 18px}
+  .nav button{flex:none;flex-direction:row;gap:12px;padding:4px 8px 4px 4px;font-size:14.5px;text-align:left}
+  .nav .nv{width:40px;height:36px;border-radius:12px}
+  .nav button:hover:not([aria-current="page"]) .nv{background:var(--s2)}
+  .top-in .brand{display:none}
+  .top-in,main{max-width:820px}
+  main{padding-bottom:60px}
+}
+
+h2.pg{font-size:28px;font-weight:800;letter-spacing:-.035em;line-height:1.12;margin:4px 0 2px}
+.mu{color:var(--mu);font-size:13px;line-height:1.45}
+.sec{margin:26px 2px 8px;font-size:13px;font-weight:700;color:var(--mu)}
+.card{position:relative;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r2);padding:16px;margin:10px 0}
+.pad0{padding:0;overflow:hidden}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sp{justify-content:space-between}
+.grow{flex:1;min-width:0}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:0 20px;border:0;border-radius:15px;background:var(--tx);color:var(--bg);font-size:15px;font-weight:650;letter-spacing:-.01em;cursor:pointer;transition:transform .12s,opacity .2s}
+.btn:active{transform:scale(.97)}
+.btn.s{background:var(--s2);color:var(--tx);box-shadow:inset 0 0 0 1.5px var(--bd)}
+.btn.a{background:var(--accent);color:var(--on-accent)}
+.btn.d{background:color-mix(in srgb,var(--er) 12%,var(--s1));color:var(--er)}
+.btn.t{background:transparent;color:var(--tx);padding:0 10px}
+.btn.sm{min-height:38px;padding:0 14px;font-size:13.5px;border-radius:12px}
+.btn.ic-only{padding:0;width:38px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:var(--s2);color:var(--mu);font-size:12px;font-weight:650;white-space:nowrap;box-shadow:inset 0 0 0 1px var(--bd)}
+.chip.wn{color:var(--wn);background:color-mix(in srgb,var(--wn) 14%,var(--s1));box-shadow:none}
+.chip.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--s1));box-shadow:none}
+
+label.lb{display:block;font-size:12.5px;font-weight:600;color:var(--mu);margin:0 0 4px}
+input,select,textarea{display:block;width:100%;min-height:46px;margin:0 0 12px;padding:0 13px;border:1.5px solid transparent;border-radius:var(--r1);background:var(--s2);color:var(--tx);font:inherit;font-size:16px}
+textarea{padding:11px 13px;min-height:96px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);background:var(--s1)}
+.qa{display:flex;align-items:center;gap:6px;padding:5px 5px 5px 16px;border-radius:18px;margin:12px 0 4px;background:var(--s1);border:1.5px solid var(--bd)}
+.qa:focus-within{border-color:var(--accent)}
+.qa .ic{color:var(--mu)}
+.qa input{flex:1;min-width:0;margin:0;padding:0;min-height:42px;background:transparent!important;border:0!important}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:6px 0}
+.stats div{padding:10px 16px;border-left:1px solid var(--bd)}
+.stats div:first-child{border-left:0}
+.stats b{display:block;font-size:30px;font-weight:800;letter-spacing:-.05em;line-height:1.05;font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--mu);font-weight:600}
+
+.grupo{margin:24px 2px 8px;font-size:13px;font-weight:700;color:var(--mu);letter-spacing:.02em}
+.chead{display:flex;align-items:center;gap:10px;padding:13px 14px 13px 16px}
+.chead .em{flex:1;min-width:0;font-weight:650;font-size:14.5px;letter-spacing:-.015em;overflow-wrap:anywhere}
+.item{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:0;border-top:1px solid var(--bd);background:transparent;text-align:left;cursor:pointer}
+.item:active{background:var(--s2)}
+.item .t1{font-weight:650;display:block}
+.item .t2{color:var(--mu);font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .go{color:var(--mu);width:16px;height:16px}
+.none{padding:12px 16px;border-top:1px solid var(--bd);color:var(--mu);font-size:13.5px}
+.empty{text-align:center;padding:36px 12px}
+.empty h3{font-size:18px;margin:10px 0 6px;letter-spacing:-.02em}
+.empty .big{width:56px;height:56px;border-radius:18px;background:var(--s3);display:grid;place-items:center;margin:0 auto;color:var(--mu)}
+.empty .big .ic{width:26px;height:26px}
+#toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--sab) + 16px);transform:translate(-50%,12px);background:var(--tx);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:40;max-width:90%;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (min-width:900px){#toast{bottom:28px}}
 </style>
 </head>
 <body>
-<header>
-  <h1>✉ Mis correos y proyectos</h1>
-  <input id="q" type="search" placeholder="🔍 Buscar correo, proyecto o tema…" autocomplete="off">
-</header>
-<main id="main"></main>
-<button class="fab" id="fab">＋ Proyecto</button>
-<div id="toast"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3.5 7.5l8.5 6 8.5-6"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7.5l9-4.5 9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></symbol>
+  <symbol id="i-aju" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="3"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 15V4M7 8l5-5 5 5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 3v11M7 10l5 5 5-5M5 17v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+</svg>
+<div id="app">
+  <nav class="nav" aria-label="Secciones">
+    <h1 class="brand nav-brand"><span class="mk"><svg class="ic"><use href="#i-mail"/></svg></span>Correos</h1>
+    <button data-v="correos"><span class="nv"><svg class="ic"><use href="#i-mail"/></svg></span>Correos</button>
+    <button data-v="proyectos"><span class="nv"><svg class="ic"><use href="#i-box"/></svg></span>Proyectos</button>
+    <button data-v="ajustes"><span class="nv"><svg class="ic"><use href="#i-aju"/></svg></span>Ajustes</button>
+  </nav>
+  <header class="top"><div class="top-in">
+    <h1 class="brand"><span class="mk"><svg class="ic"><use href="#i-mail"/></svg></span>Correos y proyectos</h1>
+    <button class="btn a sm" id="nuevo"><svg class="ic"><use href="#i-plus"/></svg>Proyecto</button>
+  </div></header>
+  <main id="main" tabindex="-1"></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
 const KEY = "gestor-movil-v1";
 let D = cargar();
-let vista = "lista"; // lista | proyecto | ajustes
+let vista = "correos";      // correos | proyectos | ajustes | form
+let q = "";
+let editando;               // nombre del proyecto en el formulario (null = nuevo)
 
 function cargar(){
   try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d && d.grupos && d.proyectos) return d; }catch(e){}
@@ -64,12 +167,17 @@ function cargar(){
 }
 function guardar(){ try{ localStorage.setItem(KEY, JSON.stringify(D)); }catch(e){ aviso("No pude guardar en este navegador"); } }
 const $ = s => document.querySelector(s);
-const esc = s => String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ic = n => `<svg class="ic"><use href="#i-${n}"/></svg>`;
 function aviso(t){ const x=$("#toast"); x.textContent=t; x.classList.add("on"); clearTimeout(aviso.t); aviso.t=setTimeout(()=>x.classList.remove("on"),2200); }
+const todosCorreos = () => D.grupos.flatMap(g=>g.correos);
+const mismo = (a,b) => String(a).toLowerCase()===String(b).toLowerCase();
+const proyectosDe = c => D.proyectos.filter(p=>mismo(p.correo,c));
+const sinCorreo = () => D.proyectos.filter(p=>!todosCorreos().some(c=>mismo(c,p.correo)));
 
 /* ---------- CSV (separador ;, comillas, saltos de línea) ---------- */
 function parseCSV(txt){
-  txt = txt.replace(/^﻿/, "");
+  txt = txt.replace(/^\uFEFF/, "");
   const primera = txt.split("\n")[0] || "";
   const sep = (primera.split(";").length >= primera.split(",").length) ? ";" : ",";
   const filas=[]; let f=[], c="", q=false;
@@ -87,7 +195,7 @@ function parseCSV(txt){
 }
 function toCSV(filas){
   const q = v => { v=String(v==null?"":v); return /[";\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
-  return "﻿" + filas.map(r=>r.map(q).join(";")).join("\r\n") + "\r\n";
+  return "\uFEFF" + filas.map(r=>r.map(q).join(";")).join("\r\n") + "\r\n";
 }
 function importar(txt){
   const filas = parseCSV(txt);
@@ -123,7 +231,6 @@ function exportar(){
   if(navigator.canShare && navigator.canShare({files:[file]})) navigator.share({files:[file]}).catch(()=>{});
   else { const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); }
 }
-const todosCorreos = () => D.grupos.flatMap(g=>g.correos);
 
 /* ---------- Portapapeles ---------- */
 async function copiar(t){
@@ -131,98 +238,129 @@ async function copiar(t){
   catch(e){ const x=document.createElement("textarea"); x.value=t; document.body.appendChild(x); x.select(); try{document.execCommand("copy"); aviso("Copiado: "+t);}catch(_){aviso("No pude copiar");} x.remove(); }
 }
 
+
 /* ---------- Vistas ---------- */
+function ir(v){ vista=v; pintar(); window.scrollTo(0,0); }
 function pintar(){
-  $("#fab").classList.toggle("hide", vista!=="lista" || !D.grupos.length);
-  $("header").classList.toggle("hide", vista!=="lista");
-  if(vista==="lista") return lista();
+  const enForm = vista==="form";
+  document.querySelectorAll(".nav button").forEach(b=>{
+    const act = b.dataset.v===vista || (enForm && b.dataset.v==="proyectos");
+    if(act) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+  });
+  $("#nuevo").hidden = !D.grupos.length || enForm || vista==="ajustes";
+  if(vista==="correos") return correos();
+  if(vista==="proyectos") return proyectos();
   if(vista==="ajustes") return ajustes();
+  if(vista==="form") return formulario(editando);
 }
-function lista(){
-  const m=$("#main"), q=$("#q").value.trim().toLowerCase();
-  if(!D.grupos.length && !D.proyectos.length){
-    m.innerHTML=`<div class="panel"><h2>Primero carga tu lista</h2>
-      <p class="mut">En tu PC abre el Gestor y pulsa <b>Exportar lista (Excel)</b>. Pasa ese archivo .csv a tu teléfono (WhatsApp, correo o Drive) y elígelo aquí.</p>
-      <button id="imp0">📂 Elegir archivo .csv</button></div>
-      <p class="mut" style="text-align:center"><a href="#" id="verajustes" style="color:var(--ac)">Ajustes</a></p>`;
-    $("#imp0").onclick=()=>$("#file").click(); $("#verajustes").onclick=e=>{e.preventDefault();vista="ajustes";pintar();};
-    return;
-  }
-  let h="", hay=false;
-  const coincide=(...t)=>!q||t.join(" ").toLowerCase().includes(q);
+function buscador(){
+  return `<div class="qa">${ic("search")}<input id="q" type="search" placeholder="Buscar correo, proyecto o tema" autocomplete="off" value="${esc(q)}"></div>`;
+}
+function enlazarBuscador(redibujar){
+  const i=$("#q"); if(!i) return;
+  i.addEventListener("input",()=>{ q=i.value; const pos=i.selectionStart; redibujar(); const n=$("#q"); n.focus(); n.setSelectionRange(pos,pos); });
+}
+function vacio(){
+  $("#main").innerHTML=`<div class="card empty"><div class="big">${ic("mail")}</div>
+    <h3>Carga tu lista</h3>
+    <p class="mu">En tu PC abre el Gestor y pulsa <b>Exportar lista (Excel)</b>. Pasa ese archivo .csv a tu teléfono y elígelo aquí.</p>
+    <button class="btn" id="imp0" style="margin-top:8px">${ic("down")}Elegir archivo .csv</button></div>`;
+  $("#imp0").onclick=()=>$("#file").click();
+}
+function filaProyecto(p, conCorreo){
+  return `<button class="item" data-p="${esc(p.nombre)}"><span class="grow"><span class="t1">${esc(p.nombre)}</span><span class="t2">${esc(p.desc||"Sin descripción")}</span></span>${conCorreo?`<span class="chip ${p.correo&&todosCorreos().some(c=>mismo(c,p.correo))?"":"wn"}">${esc(p.correo&&todosCorreos().some(c=>mismo(c,p.correo))?p.correo.split("@")[0]:"Sin correo")}</span>`:""}<svg class="ic go"><use href="#i-right"/></svg></button>`;
+}
+function enlazarLista(){
+  const m=$("#main");
+  m.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>copiar(b.dataset.cp));
+  m.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ editando=b.dataset.p; ir("form"); });
+}
+function correos(){
+  if(!D.grupos.length && !D.proyectos.length) return vacio();
+  const ql=q.trim().toLowerCase(), coincide=(...t)=>!ql||t.join(" ").toLowerCase().includes(ql);
+  const ncor=todosCorreos().length, vacios=todosCorreos().filter(c=>!proyectosDe(c).length).length;
+  let h=`<h2 class="pg">Correos</h2>
+    <div class="card stats"><div><b>${ncor}</b><span>correos</span></div><div><b>${D.proyectos.length}</b><span>proyectos</span></div><div><b>${vacios}</b><span>sin proyecto</span></div></div>`+buscador();
+  let hay=false;
   for(const g of D.grupos){
     let bloque="";
     for(const c of g.correos){
-      const ps=D.proyectos.filter(p=>p.correo.toLowerCase()===c.toLowerCase());
-      const vis=ps.filter(p=>coincide(c,p.nombre,p.desc,p.notas,g.nombre));
-      if(q && !vis.length && !coincide(c)) continue;
-      const lista=(q&&!coincide(c))?vis:ps;
-      bloque+=`<div class="correo"><div class="chead"><span class="em">${esc(c)}</span><span class="n">${ps.length}</span><button class="mini" data-cp="${esc(c)}">Copiar</button></div>`+
-        (lista.length?lista.map(p=>`<button class="proy" data-p="${esc(p.nombre)}"><b>📁 ${esc(p.nombre)}</b><span>${esc(p.desc||"Sin descripción")}</span></button>`).join(""):`<div class="vacio">Sin proyectos</div>`)+`</div>`;
+      const ps=proyectosDe(c), vis=ps.filter(p=>coincide(c,p.nombre,p.desc,p.notas,g.nombre));
+      if(ql && !vis.length && !coincide(c)) continue;
+      const lista=(ql&&!coincide(c))?vis:ps;
+      bloque+=`<div class="card pad0"><div class="chead"><span class="em">${esc(c)}</span><span class="chip" title="Proyectos">${ps.length}</span><button class="btn s sm ic-only" data-cp="${esc(c)}" aria-label="Copiar ${esc(c)}">${ic("copy")}</button></div>`+
+        (lista.length?lista.map(p=>filaProyecto(p,false)).join(""):`<div class="none">Sin proyectos</div>`)+`</div>`;
     }
     if(bloque){ hay=true; h+=`<div class="grupo">${esc(g.nombre)}</div>`+bloque; }
   }
-  const sin=D.proyectos.filter(p=>!todosCorreos().some(c=>c.toLowerCase()===p.correo.toLowerCase()) && coincide(p.nombre,p.desc,p.notas));
-  if(sin.length){ hay=true; h+=`<div class="grupo">Sin correo asignado</div><div class="correo">`+sin.map(p=>`<button class="proy" data-p="${esc(p.nombre)}"><b>📁 ${esc(p.nombre)}</b><span>${esc(p.desc||"Sin descripción")}</span></button>`).join("")+`</div>`; }
-  if(!hay) h=`<p class="mut" style="text-align:center;margin-top:30px">No encontré nada con “${esc(q)}”.</p>`;
-  h+=`<p class="mut" style="text-align:center;margin-top:24px"><a href="#" id="verajustes" style="color:var(--ac)">⚙ Ajustes: cargar, exportar, borrar</a></p>`;
-  m.innerHTML=h;
-  m.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>copiar(b.dataset.cp));
-  m.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>formulario(b.dataset.p));
-  $("#verajustes").onclick=e=>{e.preventDefault();vista="ajustes";pintar();window.scrollTo(0,0);};
+  const huer=sinCorreo().filter(p=>coincide(p.nombre,p.desc,p.notas));
+  if(huer.length){ hay=true; h+=`<div class="grupo">Sin correo asignado</div><div class="card pad0">${huer.map((p,i)=>filaProyecto(p,false).replace('class="item"',i?'class="item"':'class="item" style="border-top:0"')).join("")}</div>`; }
+  if(!hay) h+=`<p class="mu" style="text-align:center;margin-top:30px">No encontré nada con “${esc(q)}”.</p>`;
+  $("#main").innerHTML=h; enlazarBuscador(correos); enlazarLista();
+}
+function proyectos(){
+  if(!D.grupos.length && !D.proyectos.length) return vacio();
+  const ql=q.trim().toLowerCase();
+  const ps=D.proyectos.filter(p=>!ql||[p.nombre,p.correo,p.desc,p.notas].join(" ").toLowerCase().includes(ql)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  let h=`<h2 class="pg">Proyectos</h2><p class="mu" style="margin:2px 2px 0">${D.proyectos.length} en total, ordenados por nombre.</p>`+buscador();
+  h+= ps.length ? `<div class="card pad0">${ps.map((p,i)=>filaProyecto(p,true).replace('class="item"',i?'class="item"':'class="item" style="border-top:0"')).join("")}</div>`
+                : `<p class="mu" style="text-align:center;margin-top:30px">No encontré nada con “${esc(q)}”.</p>`;
+  $("#main").innerHTML=h; enlazarBuscador(proyectos); enlazarLista();
 }
 function formulario(nombre){
-  vista="proyecto";
   const nuevo=nombre==null, p=nuevo?{nombre:"",correo:"",desc:"",notas:""}:D.proyectos.find(x=>x.nombre===nombre);
-  $("#fab").classList.add("hide"); $("header").classList.add("hide");
-  const ops=['<option value="">(Sin correo asignado)</option>'].concat(D.grupos.flatMap(g=>g.correos.map(c=>`<option value="${esc(c)}" ${c.toLowerCase()===p.correo.toLowerCase()?"selected":""}>${esc(c)} · ${esc(g.nombre)}</option>`))).join("");
-  $("#main").innerHTML=`<div style="padding-top:14px"><button class="sec mini" id="atras">← Volver</button></div>
-    <label>Proyecto</label><input id="f_n" value="${esc(p.nombre)}" placeholder="Nombre del proyecto">
-    <label>Correo donde se trabaja</label><select id="f_c">${ops}</select>
-    <label>De qué se trata</label><textarea id="f_d">${esc(p.desc)}</textarea>
-    <label>Notas</label><textarea id="f_t">${esc(p.notas)}</textarea>
-    <div class="bar" style="margin-top:18px"><button id="gu">Guardar</button>${nuevo?"":'<button class="mal" id="el">Eliminar</button>'}</div>`;
-  window.scrollTo(0,0);
-  $("#atras").onclick=()=>{vista="lista";pintar();};
+  if(!p){ vista="proyectos"; return pintar(); }
+  const ops='<option value="">(Sin correo asignado)</option>'+D.grupos.map(g=>`<optgroup label="${esc(g.nombre)}">`+g.correos.map(c=>`<option value="${esc(c)}" ${mismo(c,p.correo)?"selected":""}>${esc(c)}</option>`).join("")+`</optgroup>`).join("");
+  $("#main").innerHTML=`<div class="row" style="margin:2px 0 6px"><button class="btn t sm" id="atras" style="padding-left:0">${ic("left")}Volver</button></div>
+    <h2 class="pg">${nuevo?"Nuevo proyecto":esc(p.nombre)}</h2>
+    <div class="card" style="margin-top:14px">
+      <label class="lb" for="f_n">Proyecto</label><input id="f_n" value="${esc(p.nombre)}" placeholder="Nombre del proyecto">
+      <label class="lb" for="f_c">Correo donde se trabaja</label><select id="f_c">${ops}</select>
+      <label class="lb" for="f_d">De qué se trata</label><textarea id="f_d">${esc(p.desc)}</textarea>
+      <label class="lb" for="f_t">Notas</label><textarea id="f_t">${esc(p.notas)}</textarea>
+      <div class="row" style="margin-top:6px"><button class="btn grow" id="gu">Guardar</button>${nuevo?"":`<button class="btn d" id="el">${ic("trash")}Eliminar</button>`}</div>
+    </div>`;
+  $("#atras").onclick=()=>ir("proyectos");
   $("#gu").onclick=()=>{
     const n=$("#f_n").value.trim();
     if(!n) return aviso("Ponle un nombre al proyecto");
-    if(D.proyectos.some(x=>x!==p && x.nombre.toLowerCase()===n.toLowerCase())) return aviso("Ya existe un proyecto con ese nombre");
+    if(D.proyectos.some(x=>x!==p && mismo(x.nombre,n))) return aviso("Ya existe un proyecto con ese nombre");
     p.nombre=n; p.correo=$("#f_c").value; p.desc=$("#f_d").value.trim(); p.notas=$("#f_t").value.trim();
     if(nuevo) D.proyectos.push(p);
-    guardar(); aviso("Guardado"); vista="lista"; pintar();
+    guardar(); aviso("Guardado"); ir("proyectos");
   };
-  if(!nuevo) $("#el").onclick=()=>{ if(confirm("¿Eliminar el proyecto «"+p.nombre+"»?")){ D.proyectos=D.proyectos.filter(x=>x!==p); guardar(); vista="lista"; pintar(); } };
+  if(!nuevo) $("#el").onclick=()=>{ if(confirm("¿Eliminar el proyecto «"+p.nombre+"»?")){ D.proyectos=D.proyectos.filter(x=>x!==p); guardar(); aviso("Proyecto eliminado"); ir("proyectos"); } };
 }
 function ajustes(){
-  $("#main").innerHTML=`<div style="padding-top:14px"><button class="sec mini" id="atras">← Volver</button></div>
-    <div class="panel"><h2>Cargar lista desde el PC</h2>
-      <p class="mut">Reemplaza lo que hay aquí por el archivo .csv que exportaste del Gestor. Si hiciste cambios en el teléfono, expórtalos primero.</p>
-      <button id="imp">📂 Elegir archivo .csv</button></div>
-    <div class="panel"><h2>Sacar la lista del teléfono</h2>
-      <p class="mut">Genera un .csv con lo que tienes aquí para guardarlo o enviarlo.</p>
-      <button class="sec" id="exp">📤 Exportar lista</button></div>
-    <div class="panel"><h2>Borrar datos de este teléfono</h2>
-      <p class="mut">Solo borra la copia de este navegador. Tu lista en el PC no se toca.</p>
-      <button class="mal" id="bor">🗑 Borrar todo</button></div>
-    <p class="mut">Tus datos se guardan solo en este teléfono. Esta página no contiene tus correos ni contraseñas; no se guardan contraseñas aquí.</p>`;
-  $("#atras").onclick=()=>{vista="lista";pintar();};
+  $("#main").innerHTML=`<h2 class="pg">Ajustes</h2>
+    <div class="sec">Datos</div>
+    <div class="card"><h3 style="margin:0 0 4px;font-size:16px">Cargar lista desde el PC</h3>
+      <p class="mu" style="margin:0 0 12px">Reemplaza lo que hay aquí por el archivo .csv exportado del Gestor. Si cambiaste algo en el teléfono, expórtalo primero.</p>
+      <button class="btn" id="imp">${ic("down")}Elegir archivo .csv</button></div>
+    <div class="card"><h3 style="margin:0 0 4px;font-size:16px">Sacar la lista del teléfono</h3>
+      <p class="mu" style="margin:0 0 12px">Genera un .csv con lo que tienes aquí, para guardarlo o enviarlo.</p>
+      <button class="btn s" id="exp">${ic("up")}Exportar lista</button></div>
+    <div class="sec">Zona delicada</div>
+    <div class="card"><h3 style="margin:0 0 4px;font-size:16px">Borrar datos de este teléfono</h3>
+      <p class="mu" style="margin:0 0 12px">Solo borra la copia de este navegador. Tu lista en el PC no se toca.</p>
+      <button class="btn d" id="bor">${ic("trash")}Borrar todo</button></div>
+    <p class="mu" style="margin:18px 4px">Tus datos se guardan solo en este teléfono. Esta página no contiene tus correos y aquí no se guardan contraseñas.</p>`;
   $("#imp").onclick=()=>$("#file").click();
   $("#exp").onclick=exportar;
-  $("#bor").onclick=()=>{ if(confirm("¿Borrar todos los datos de este teléfono?")){ D={grupos:[],proyectos:[]}; guardar(); vista="lista"; pintar(); } };
+  $("#bor").onclick=()=>{ if(confirm("¿Borrar todos los datos de este teléfono?")){ D={grupos:[],proyectos:[]}; guardar(); aviso("Datos borrados"); ir("correos"); } };
 }
 
 /* ---------- Arranque ---------- */
-const inp=document.createElement("input"); inp.type="file"; inp.id="file"; inp.accept=".csv,text/csv,text/plain"; inp.className="hide";
+const inp=document.createElement("input"); inp.type="file"; inp.id="file"; inp.accept=".csv,text/csv,text/plain"; inp.hidden=true;
 document.body.appendChild(inp);
 inp.onchange=async()=>{
   const f=inp.files[0]; if(!f) return;
-  try{ const r=importar(await f.text()); aviso(`Cargados ${r.correos} correos y ${r.proyectos} proyectos`); vista="lista"; pintar(); }
+  try{ const r=importar(await f.text()); aviso(`Cargados ${r.correos} correos y ${r.proyectos} proyectos`); q=""; ir("correos"); }
   catch(e){ aviso(e.message||"No pude leer el archivo"); }
   inp.value="";
 };
-$("#q").addEventListener("input",()=>{ if(vista==="lista") lista(); });
-$("#fab").onclick=()=>formulario(null);
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{ q=""; ir(b.dataset.v); });
+$("#nuevo").onclick=()=>{ editando=null; ir("form"); };
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 pintar();
 </script>

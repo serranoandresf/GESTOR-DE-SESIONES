@@ -14,8 +14,10 @@ from .ejemplo import crear_datos_ejemplo
 from .reglas import ErrorRegla, Servicio
 
 SIN_CORREO = "(sin correo)"
-COLOR_GRIS = "#8a8a8a"
-COLOR_AVISO = "#b45309"
+COLOR_GRIS = "#636366"
+COLOR_AVISO = "#9a4a08"
+PAPEL, SUPERFICIE, SUPERFICIE_2, SUPERFICIE_3 = "#f2f2f7", "#ffffff", "#f2f2f7", "#e5e5ea"
+TINTA, BORDE, ACENTO = "#1c1c1e", "#d1d1d6", "#0071e3"
 
 
 def seguro(fn):
@@ -33,7 +35,7 @@ def seguro(fn):
 
 def _texto_con_scroll(padre, alto):
     marco = ttk.Frame(padre)
-    t = tk.Text(marco, height=alto, wrap="word", relief="solid", bd=1, padx=6, pady=4, undo=True)
+    t = tk.Text(marco, height=alto, wrap="word", relief="flat", bd=0, highlightthickness=1, highlightbackground=BORDE, highlightcolor=ACENTO, bg=SUPERFICIE, fg=TINTA, insertbackground=TINTA, padx=8, pady=6, undo=True, font="TkDefaultFont")
     sb = ttk.Scrollbar(marco, orient="vertical", command=t.yview)
     t.configure(yscrollcommand=sb.set)
     t.pack(side="left", fill="both", expand=True)
@@ -104,16 +106,41 @@ class App(tk.Tk):
                              "las escrituras son atómicas. Puedes seguir usando la app.", parent=self)
 
     def _estilo(self):
+        """Aspecto sobrio: papel frío, superficies planas y un solo color de acento (mismo sistema que la versión móvil)."""
+        fam = "Segoe UI" if sys.platform == "win32" else "DejaVu Sans"
         for nombre in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):
-            tkfont.nametofont(nombre).configure(family="Segoe UI" if sys.platform == "win32" else "DejaVu Sans", size=10)
+            tkfont.nametofont(nombre).configure(family=fam, size=10)
         st = ttk.Style(self)
-        if sys.platform != "win32":
-            st.theme_use("clam")
-        # arreglo conocido: en algunas versiones de Tk los colores de filas del Treeview no se ven
-        quitar = lambda opt: [e for e in st.map("Treeview", query_opt=opt) if e[:2] != ("!disabled", "!selected")]
-        st.map("Treeview", foreground=quitar("foreground"), background=quitar("background"))
-        st.configure("Treeview", rowheight=26)
-        st.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
+        st.theme_use("clam")                      # el único tema que respeta bien los colores en todos los sistemas
+        self.configure(bg=PAPEL)
+        st.configure(".", background=PAPEL, foreground=TINTA, bordercolor=BORDE, lightcolor=PAPEL, darkcolor=PAPEL,
+                     troughcolor=SUPERFICIE_2, focuscolor=ACENTO, selectbackground=ACENTO, selectforeground="#ffffff")
+        st.configure("TFrame", background=PAPEL)
+        st.configure("TLabel", background=PAPEL, foreground=TINTA)
+        st.configure("TLabelframe", background=PAPEL, bordercolor=BORDE)
+        st.configure("TLabelframe.Label", background=PAPEL, foreground=COLOR_GRIS, font=(fam, 9, "bold"))
+        st.configure("TButton", background=SUPERFICIE, foreground=TINTA, bordercolor=BORDE, padding=(12, 6), relief="flat")
+        st.map("TButton", background=[("pressed", SUPERFICIE_3), ("active", SUPERFICIE_2)], bordercolor=[("focus", ACENTO)])
+        st.configure("Accent.TButton", background=ACENTO, foreground="#ffffff", bordercolor=ACENTO, padding=(14, 6),
+                     font=(fam, 10, "bold"))
+        st.map("Accent.TButton", background=[("disabled", "#a9cdf3"), ("pressed", "#005bb8"), ("active", "#0a64c8")],
+               foreground=[("disabled", "#ffffff")], bordercolor=[("disabled", "#a9cdf3")])
+        st.map("TButton", foreground=[("disabled", "#a1a1a6")])
+        for w in ("TEntry", "TCombobox", "TSpinbox"):
+            st.configure(w, fieldbackground=SUPERFICIE, background=SUPERFICIE, foreground=TINTA, bordercolor=BORDE, padding=5)
+            st.map(w, bordercolor=[("focus", ACENTO)], fieldbackground=[("readonly", SUPERFICIE), ("disabled", SUPERFICIE_2)],
+                   foreground=[("disabled", COLOR_GRIS)], selectbackground=[("readonly", SUPERFICIE)],
+                   selectforeground=[("readonly", TINTA)])
+        st.configure("TCheckbutton", background=PAPEL)
+        st.configure("TPanedwindow", background=BORDE)
+        st.configure("Sash", sashthickness=1, background=BORDE)
+        st.configure("TScrollbar", background=SUPERFICIE_3, troughcolor=PAPEL, bordercolor=PAPEL, arrowcolor=COLOR_GRIS)
+        st.configure("Treeview", background=SUPERFICIE, fieldbackground=SUPERFICIE, foreground=TINTA, bordercolor=BORDE,
+                     rowheight=30, borderwidth=0, relief="flat")
+        st.configure("Treeview.Heading", font=(fam, 10, "bold"), background=SUPERFICIE_2, foreground=COLOR_GRIS)
+        st.map("Treeview", background=[("selected", ACENTO)], foreground=[("selected", "#ffffff")])
+        self.option_add("*TCombobox*Listbox.background", SUPERFICIE)
+        self.option_add("*TCombobox*Listbox.selectBackground", ACENTO)
 
     # ----------------------------------------------------------- construcción
     def _construir(self):
@@ -190,7 +217,7 @@ class App(tk.Tk):
         m2.grid(row=5, column=1, sticky="nsew", padx=(12, 0), pady=(6, 4))
         fila = ttk.Frame(f)
         fila.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(12, 0))
-        self.b_guardar = ttk.Button(fila, text="💾 Guardar cambios  (Ctrl+S)", command=self.accion_guardar)
+        self.b_guardar = ttk.Button(fila, text="Guardar cambios  (Ctrl+S)", command=self.accion_guardar, style="Accent.TButton")
         self.b_guardar.pack(side="left")
         self.b_descartar = ttk.Button(fila, text="↺ Descartar", command=self.accion_descartar)
         self.b_descartar.pack(side="left", padx=6)

@@ -3,6 +3,8 @@ name: Crear instalador de Windows
 # Se ejecuta al publicar una versión (etiqueta v*, por ejemplo v2.0.0) o a mano desde la pestaña Actions.
 on:
   push:
+    branches: [main]
+    paths: ["gestor_sesiones/__init__.py"]   # al subir una versión nueva (cambia __version__) se publica sola
     tags: ["v*"]
   workflow_dispatch:
 
@@ -42,7 +44,10 @@ jobs:
           name: GestorSesiones-Setup
           path: dist_installer/*.exe
       - name: Publicar en Releases
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: Gestor de Sesiones v${{ steps.ver.outputs.version }}
+          generate_release_notes: true
           files: dist_installer/*.exe

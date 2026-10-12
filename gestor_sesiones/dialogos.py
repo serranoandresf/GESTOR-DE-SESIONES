@@ -143,7 +143,7 @@ class NuevoProyectoDialog(Dialogo):
         ttk.Combobox(f, textvariable=self.v_correo, values=list(self.etq), state="readonly", width=50).grid(
             row=1, column=1, sticky="ew", padx=(10, 0), pady=3)
         ttk.Label(f, text="De qué se trata:").grid(row=2, column=0, sticky="nw", pady=(6, 0))
-        self.t_desc = tk.Text(f, width=50, height=5, wrap="word")
+        self.t_desc = tk.Text(f, width=50, height=5, wrap="word", relief="flat", bd=0, highlightthickness=1, highlightbackground="#d1d1d6", highlightcolor="#0071e3", padx=8, pady=6)
         self.t_desc.grid(row=2, column=1, sticky="ew", padx=(10, 0), pady=(6, 3))
         ttk.Label(f, foreground="#555", wraplength=420, justify="left",
                   text="Un proyecto está en UN solo correo; un correo puede tener varios proyectos. "
