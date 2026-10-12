@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6feb">
+<title>Mis correos y proyectos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--ln:#e3e6ea;--ac:#1f6feb;--acx:#fff;--ok:#1a7f37;--bad:#cf222e}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#1a2028;--tx:#e8ecf1;--mut:#97a3b3;--ln:#2b3440;--ac:#4c8dff;--acx:#06121f;--ok:#3fb950;--bad:#ff6b6b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:90px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px 8px;border-bottom:1px solid var(--ln)}
+h1{font-size:18px;margin:0 0 8px}
+input,textarea,select{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:12px}
+textarea{min-height:90px;resize:vertical}
+label{display:block;font-size:13px;color:var(--mut);margin:14px 0 4px}
+main{padding:8px 16px}
+.grupo{margin:18px 0 6px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.correo{background:var(--card);border:1px solid var(--ln);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.chead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--ln)}
+.chead .em{flex:1;font-weight:600;word-break:break-all}
+.chead .n{color:var(--mut);font-size:13px}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:var(--acx);font-weight:600}
+button.sec{background:transparent;color:var(--ac);border:1px solid var(--ln)}
+button.mal{background:transparent;color:var(--bad);border:1px solid var(--ln)}
+button.mini{padding:6px 10px;font-size:14px}
+.proy{padding:11px 14px;border-top:1px solid var(--ln);display:block;width:100%;text-align:left;background:transparent;color:var(--tx);border-radius:0;font-weight:400}
+.proy:first-of-type{border-top:0}
+.proy b{display:block}
+.proy span{color:var(--mut);font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vacio{padding:10px 14px;color:var(--mut);font-size:14px}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));box-shadow:0 4px 14px rgba(0,0,0,.25);padding:14px 20px;border-radius:999px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.panel{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:16px;margin:16px 0}
+.panel h2{margin:0 0 6px;font-size:17px}
+.mut{color:var(--mut);font-size:14px}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90%}
+#toast.on{opacity:1}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>✉ Mis correos y proyectos</h1>
+  <input id="q" type="search" placeholder="🔍 Buscar correo, proyecto o tema…" autocomplete="off">
+</header>
+<main id="main"></main>
+<button class="fab" id="fab">＋ Proyecto</button>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const KEY = "gestor-movil-v1";
+let D = cargar();
+let vista = "lista"; // lista | proyecto | ajustes
+
+function cargar(){
+  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d && d.grupos && d.proyectos) return d; }catch(e){}
+  return {grupos:[], proyectos:[]};
+}
+function guardar(){ try{ localStorage.setItem(KEY, JSON.stringify(D)); }catch(e){ aviso("No pude guardar en este navegador"); } }
+const $ = s => document.querySelector(s);
+const esc = s => String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function aviso(t){ const x=$("#toast"); x.textContent=t; x.classList.add("on"); clearTimeout(aviso.t); aviso.t=setTimeout(()=>x.classList.remove("on"),2200); }
+
+/* ---------- CSV (separador ;, comillas, saltos de línea) ---------- */
+function parseCSV(txt){
+  txt = txt.replace(/^﻿/, "");
+  const primera = txt.split("\n")[0] || "";
+  const sep = (primera.split(";").length >= primera.split(",").length) ? ";" : ",";
+  const filas=[]; let f=[], c="", q=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(q){
+      if(ch==='"'){ if(txt[i+1]==='"'){c+='"';i++;} else q=false; } else c+=ch;
+    } else if(ch==='"') q=true;
+    else if(ch===sep){ f.push(c); c=""; }
+    else if(ch==="\n"){ f.push(c); filas.push(f); f=[]; c=""; }
+    else if(ch!=="\r") c+=ch;
+  }
+  if(c!==""||f.length){ f.push(c); filas.push(f); }
+  return filas.filter(r=>r.some(x=>x.trim()!==""));
+}
+function toCSV(filas){
+  const q = v => { v=String(v==null?"":v); return /[";\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  return "﻿" + filas.map(r=>r.map(q).join(";")).join("\r\n") + "\r\n";
+}
+function importar(txt){
+  const filas = parseCSV(txt);
+  if(filas.length<2) throw new Error("El archivo está vacío");
+  const enc = filas[0].map(x=>x.trim().toLowerCase());
+  const ix = n => enc.findIndex(x=>x.startsWith(n));
+  const iG=ix("grupo"), iC=ix("correo"), iP=ix("proyecto"), iD=ix("de qu"), iN=ix("notas");
+  if(iC<0||iP<0) throw new Error("No parece la lista exportada (faltan las columnas Correo y Proyecto)");
+  const grupos=[], proyectos=[], gi={};
+  for(const r of filas.slice(1)){
+    const g=(r[iG]||"").trim(), c=(r[iC]||"").trim(), p=(r[iP]||"").trim();
+    if(c){
+      const gn=g||"Sin grupo";
+      if(!gi[gn]){ gi[gn]={nombre:gn,correos:[]}; grupos.push(gi[gn]); }
+      if(!gi[gn].correos.some(x=>x.toLowerCase()===c.toLowerCase())) gi[gn].correos.push(c);
+    }
+    if(p && !proyectos.some(x=>x.nombre.toLowerCase()===p.toLowerCase()))
+      proyectos.push({nombre:p, correo:c, desc:(r[iD]||"").trim(), notas:(r[iN]||"").trim()});
+  }
+  D={grupos,proyectos}; guardar();
+  return {correos:grupos.reduce((a,g)=>a+g.correos.length,0), proyectos:proyectos.length};
+}
+function exportar(){
+  const filas=[["Grupo","Correo","Proyecto","De qué se trata","Notas"]];
+  for(const g of D.grupos) for(const c of g.correos){
+    const ps=D.proyectos.filter(p=>p.correo.toLowerCase()===c.toLowerCase());
+    if(!ps.length) filas.push([g.nombre,c,"","",""]);
+    ps.forEach(p=>filas.push([g.nombre,c,p.nombre,p.desc,p.notas]));
+  }
+  D.proyectos.filter(p=>!todosCorreos().some(c=>c.toLowerCase()===p.correo.toLowerCase())).forEach(p=>filas.push(["","",p.nombre,p.desc,p.notas]));
+  const blob=new Blob([toCSV(filas)],{type:"text/csv;charset=utf-8"});
+  const file=new File([blob],"mis_correos_y_proyectos.csv",{type:"text/csv"});
+  if(navigator.canShare && navigator.canShare({files:[file]})) navigator.share({files:[file]}).catch(()=>{});
+  else { const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); }
+}
+const todosCorreos = () => D.grupos.flatMap(g=>g.correos);
+
+/* ---------- Portapapeles ---------- */
+async function copiar(t){
+  try{ await navigator.clipboard.writeText(t); aviso("Copiado: "+t); }
+  catch(e){ const x=document.createElement("textarea"); x.value=t; document.body.appendChild(x); x.select(); try{document.execCommand("copy"); aviso("Copiado: "+t);}catch(_){aviso("No pude copiar");} x.remove(); }
+}
+
+/* ---------- Vistas ---------- */
+function pintar(){
+  $("#fab").classList.toggle("hide", vista!=="lista" || !D.grupos.length);
+  $("header").classList.toggle("hide", vista!=="lista");
+  if(vista==="lista") return lista();
+  if(vista==="ajustes") return ajustes();
+}
+function lista(){
+  const m=$("#main"), q=$("#q").value.trim().toLowerCase();
+  if(!D.grupos.length && !D.proyectos.length){
+    m.innerHTML=`<div class="panel"><h2>Primero carga tu lista</h2>
+      <p class="mut">En tu PC abre el Gestor y pulsa <b>Exportar lista (Excel)</b>. Pasa ese archivo .csv a tu teléfono (WhatsApp, correo o Drive) y elígelo aquí.</p>
+      <button id="imp0">📂 Elegir archivo .csv</button></div>
+      <p class="mut" style="text-align:center"><a href="#" id="verajustes" style="color:var(--ac)">Ajustes</a></p>`;
+    $("#imp0").onclick=()=>$("#file").click(); $("#verajustes").onclick=e=>{e.preventDefault();vista="ajustes";pintar();};
+    return;
+  }
+  let h="", hay=false;
+  const coincide=(...t)=>!q||t.join(" ").toLowerCase().includes(q);
+  for(const g of D.grupos){
+    let bloque="";
+    for(const c of g.correos){
+      const ps=D.proyectos.filter(p=>p.correo.toLowerCase()===c.toLowerCase());
+      const vis=ps.filter(p=>coincide(c,p.nombre,p.desc,p.notas,g.nombre));
+      if(q && !vis.length && !coincide(c)) continue;
+      const lista=(q&&!coincide(c))?vis:ps;
+      bloque+=`<div class="correo"><div class="chead"><span class="em">${esc(c)}</span><span class="n">${ps.length}</span><button class="mini" data-cp="${esc(c)}">Copiar</button></div>`+
+        (lista.length?lista.map(p=>`<button class="proy" data-p="${esc(p.nombre)}"><b>📁 ${esc(p.nombre)}</b><span>${esc(p.desc||"Sin descripción")}</span></button>`).join(""):`<div class="vacio">Sin proyectos</div>`)+`</div>`;
+    }
+    if(bloque){ hay=true; h+=`<div class="grupo">${esc(g.nombre)}</div>`+bloque; }
+  }
+  const sin=D.proyectos.filter(p=>!todosCorreos().some(c=>c.toLowerCase()===p.correo.toLowerCase()) && coincide(p.nombre,p.desc,p.notas));
+  if(sin.length){ hay=true; h+=`<div class="grupo">Sin correo asignado</div><div class="correo">`+sin.map(p=>`<button class="proy" data-p="${esc(p.nombre)}"><b>📁 ${esc(p.nombre)}</b><span>${esc(p.desc||"Sin descripción")}</span></button>`).join("")+`</div>`; }
+  if(!hay) h=`<p class="mut" style="text-align:center;margin-top:30px">No encontré nada con “${esc(q)}”.</p>`;
+  h+=`<p class="mut" style="text-align:center;margin-top:24px"><a href="#" id="verajustes" style="color:var(--ac)">⚙ Ajustes: cargar, exportar, borrar</a></p>`;
+  m.innerHTML=h;
+  m.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>copiar(b.dataset.cp));
+  m.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>formulario(b.dataset.p));
+  $("#verajustes").onclick=e=>{e.preventDefault();vista="ajustes";pintar();window.scrollTo(0,0);};
+}
+function formulario(nombre){
+  vista="proyecto";
+  const nuevo=nombre==null, p=nuevo?{nombre:"",correo:"",desc:"",notas:""}:D.proyectos.find(x=>x.nombre===nombre);
+  $("#fab").classList.add("hide"); $("header").classList.add("hide");
+  const ops=['<option value="">(Sin correo asignado)</option>'].concat(D.grupos.flatMap(g=>g.correos.map(c=>`<option value="${esc(c)}" ${c.toLowerCase()===p.correo.toLowerCase()?"selected":""}>${esc(c)} · ${esc(g.nombre)}</option>`))).join("");
+  $("#main").innerHTML=`<div style="padding-top:14px"><button class="sec mini" id="atras">← Volver</button></div>
+    <label>Proyecto</label><input id="f_n" value="${esc(p.nombre)}" placeholder="Nombre del proyecto">
+    <label>Correo donde se trabaja</label><select id="f_c">${ops}</select>
+    <label>De qué se trata</label><textarea id="f_d">${esc(p.desc)}</textarea>
+    <label>Notas</label><textarea id="f_t">${esc(p.notas)}</textarea>
+    <div class="bar" style="margin-top:18px"><button id="gu">Guardar</button>${nuevo?"":'<button class="mal" id="el">Eliminar</button>'}</div>`;
+  window.scrollTo(0,0);
+  $("#atras").onclick=()=>{vista="lista";pintar();};
+  $("#gu").onclick=()=>{
+    const n=$("#f_n").value.trim();
+    if(!n) return aviso("Ponle un nombre al proyecto");
+    if(D.proyectos.some(x=>x!==p && x.nombre.toLowerCase()===n.toLowerCase())) return aviso("Ya existe un proyecto con ese nombre");
+    p.nombre=n; p.correo=$("#f_c").value; p.desc=$("#f_d").value.trim(); p.notas=$("#f_t").value.trim();
+    if(nuevo) D.proyectos.push(p);
+    guardar(); aviso("Guardado"); vista="lista"; pintar();
+  };
+  if(!nuevo) $("#el").onclick=()=>{ if(confirm("¿Eliminar el proyecto «"+p.nombre+"»?")){ D.proyectos=D.proyectos.filter(x=>x!==p); guardar(); vista="lista"; pintar(); } };
+}
+function ajustes(){
+  $("#main").innerHTML=`<div style="padding-top:14px"><button class="sec mini" id="atras">← Volver</button></div>
+    <div class="panel"><h2>Cargar lista desde el PC</h2>
+      <p class="mut">Reemplaza lo que hay aquí por el archivo .csv que exportaste del Gestor. Si hiciste cambios en el teléfono, expórtalos primero.</p>
+      <button id="imp">📂 Elegir archivo .csv</button></div>
+    <div class="panel"><h2>Sacar la lista del teléfono</h2>
+      <p class="mut">Genera un .csv con lo que tienes aquí para guardarlo o enviarlo.</p>
+      <button class="sec" id="exp">📤 Exportar lista</button></div>
+    <div class="panel"><h2>Borrar datos de este teléfono</h2>
+      <p class="mut">Solo borra la copia de este navegador. Tu lista en el PC no se toca.</p>
+      <button class="mal" id="bor">🗑 Borrar todo</button></div>
+    <p class="mut">Tus datos se guardan solo en este teléfono. Esta página no contiene tus correos ni contraseñas; no se guardan contraseñas aquí.</p>`;
+  $("#atras").onclick=()=>{vista="lista";pintar();};
+  $("#imp").onclick=()=>$("#file").click();
+  $("#exp").onclick=exportar;
+  $("#bor").onclick=()=>{ if(confirm("¿Borrar todos los datos de este teléfono?")){ D={grupos:[],proyectos:[]}; guardar(); vista="lista"; pintar(); } };
+}
+
+/* ---------- Arranque ---------- */
+const inp=document.createElement("input"); inp.type="file"; inp.id="file"; inp.accept=".csv,text/csv,text/plain"; inp.className="hide";
+document.body.appendChild(inp);
+inp.onchange=async()=>{
+  const f=inp.files[0]; if(!f) return;
+  try{ const r=importar(await f.text()); aviso(`Cargados ${r.correos} correos y ${r.proyectos} proyectos`); vista="lista"; pintar(); }
+  catch(e){ aviso(e.message||"No pude leer el archivo"); }
+  inp.value="";
+};
+$("#q").addEventListener("input",()=>{ if(vista==="lista") lista(); });
+$("#fab").onclick=()=>formulario(null);
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+pintar();
+</script>
+</body>
+</html>
