@@ -1,0 +1,9 @@
+mis_cuentas.json
+DATOS/
+*.env
+__pycache__/
+*.pyc
+build/
+dist/
+dist_installer/
+*.spec
