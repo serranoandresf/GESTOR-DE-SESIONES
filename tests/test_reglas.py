@@ -254,5 +254,29 @@ class TestDatosDeVersionesAnteriores(unittest.TestCase):
             self.assertEqual(p["historial_sesiones"], [{"fecha": "2026-10-10"}])
 
 
+class ImportarCsv(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.s = Servicio(Almacen(Path(self.tmp.name) / "datos"), None, secretos=FakeSecretos())
+        self.csv = Path(self.tmp.name) / "l.csv"
+        self.csv.write_text("\ufeffGrupo;Correo;Proyecto;De qué se trata;Notas\n"
+                            "Grupo A;a@x.com;UNO;Tema uno;\nGrupo A;b@x.com;;;\nGrupo B;c@x.com;DOS;;n\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_importa_y_es_repetible(self):
+        self.assertEqual(self.s.importar_csv(self.csv), (3, 2, 0))
+        self.assertEqual(self.s.correo_de("UNO"), "a@x.com")
+        self.assertEqual(self.s.proyecto("UNO")["descripcion"], "Tema uno")
+        self.assertEqual(self.s.importar_csv(self.csv), (0, 0, 2))
+        self.assertEqual(len(self.s.proyectos()), 2)
+
+    def test_archivo_ajeno(self):
+        self.csv.write_text("a;b\n1;2\n", encoding="utf-8")
+        with self.assertRaises(ErrorRegla):
+            self.s.importar_csv(self.csv)
+
+
 if __name__ == "__main__":
     unittest.main()

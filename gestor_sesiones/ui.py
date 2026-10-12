@@ -121,6 +121,7 @@ class App(tk.Tk):
         barra.pack(fill="x")
         for txt, cmd in [("➕ Nuevo proyecto", self.accion_nuevo_proyecto), ("✉ Nuevo correo", self.accion_nuevo_correo),
                          ("👥 Gestionar correos", self.accion_grupos), ("📤 Exportar lista (Excel)", self.accion_exportar_csv),
+                         ("📥 Importar lista", self.accion_importar_csv),
                          ("⚙ Configuración", self.accion_config), ("🔍 Revisar datos", self.accion_revisar)]:
             ttk.Button(barra, text=txt, command=cmd).pack(side="left", padx=(0, 6))
         self.l_msg = ttk.Label(self, anchor="w", padding=(10, 4), relief="sunken")
@@ -643,6 +644,18 @@ class App(tk.Tk):
             return
         self.srv.exportar_csv(ruta)
         self.msg(f"✅ Lista guardada en {ruta}. Ábrela con Excel (doble clic).")
+
+    @seguro
+    def accion_importar_csv(self):
+        if not self._puedo_continuar():
+            return
+        ruta = filedialog.askopenfilename(parent=self, filetypes=[("Lista (CSV)", "*.csv")],
+                                          title="Importar lista de correos y proyectos")
+        if not ruta:
+            return
+        c, p, a = self.srv.importar_csv(ruta)
+        self.refrescar_todo()
+        self.msg(f"✅ Lista importada: {c} correo(s) nuevo(s), {p} proyecto(s) nuevo(s), {a} actualizado(s).")
 
     @seguro
     def accion_config(self):

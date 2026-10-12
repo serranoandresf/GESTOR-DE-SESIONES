@@ -287,6 +287,50 @@ class Servicio:
             w.writerow(["Grupo", "Correo", "Proyecto", "De qué se trata", "Notas"])
             w.writerows(self.filas_lista())
 
+    def importar_csv(self, ruta):
+        """Carga la lista exportada (Grupo;Correo;Proyecto;De qué se trata;Notas). Seguro de repetir:
+        crea lo que falta, no duplica y no borra nada. Devuelve (correos_nuevos, proyectos_nuevos, proyectos_actualizados)."""
+        try:
+            with open(ruta, encoding="utf-8-sig", newline="") as f:
+                muestra = f.readline()
+                f.seek(0)
+                sep = ";" if muestra.count(";") >= muestra.count(",") else ","
+                filas = list(csv.reader(f, delimiter=sep))
+        except OSError as e:
+            raise ErrorRegla(f"No pude leer el archivo: {e}")
+        if len(filas) < 2:
+            raise ErrorRegla("El archivo está vacío.")
+        enc = [x.strip().lower() for x in filas[0]]
+
+        def col(prefijo):
+            return next((i for i, x in enumerate(enc) if x.startswith(prefijo)), -1)
+        iG, iC, iP, iD, iN = col("grupo"), col("correo"), col("proyecto"), col("de qu"), col("notas")
+        if iC < 0 or iP < 0:
+            raise ErrorRegla("No parece la lista exportada: faltan las columnas Correo y Proyecto.")
+        get = lambda r, i: (r[i].strip() if 0 <= i < len(r) else "")
+        nuevos_c = nuevos_p = actualizados = 0
+        for r in filas[1:]:
+            g, c, p = get(r, iG), get(r, iC), get(r, iP)
+            if c:
+                g = g or "Sin grupo"
+                if g not in self.grupos():
+                    self.crear_grupo(g)
+                if not self.buscar_cuenta(c):
+                    self.agregar_cuenta(g, c)
+                    nuevos_c += 1
+            if not p:
+                continue
+            d, n = get(r, iD), get(r, iN)
+            if self.alm.existe_proyecto(p):
+                actual = self.proyecto(p)
+                self.actualizar_proyecto(p, descripcion=d or actual.get("descripcion", ""),
+                                         notas=n or actual.get("notas", ""), correo=(c or actual.get("correo") or None))
+                actualizados += 1
+            else:
+                self.crear_proyecto(p, d, c or None, n)
+                nuevos_p += 1
+        return nuevos_c, nuevos_p, actualizados
+
     # ------------------------------------------------------------ integridad
     def verificar_reglas(self):
         """Revisa que los archivos cumplan las reglas (por si se editaron a mano). Devuelve avisos."""
