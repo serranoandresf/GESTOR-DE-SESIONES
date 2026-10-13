@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from . import cuentas_lote
-from .reglas import ErrorRegla
+from .reglas import ESTADOS, ErrorRegla
 
 
 class Dialogo(tk.Toplevel):
@@ -142,14 +142,18 @@ class NuevoProyectoDialog(Dialogo):
         self.v_correo.set(pre)
         ttk.Combobox(f, textvariable=self.v_correo, values=list(self.etq), state="readonly", width=50).grid(
             row=1, column=1, sticky="ew", padx=(10, 0), pady=3)
-        ttk.Label(f, text="De qué se trata:").grid(row=2, column=0, sticky="nw", pady=(6, 0))
+        ttk.Label(f, text="Estado:").grid(row=2, column=0, sticky="w")
+        self.v_estado = tk.StringVar(value="En curso")
+        ttk.Combobox(f, textvariable=self.v_estado, values=ESTADOS, state="readonly", width=20).grid(
+            row=2, column=1, sticky="w", padx=(10, 0), pady=3)
+        ttk.Label(f, text="De qué se trata:").grid(row=3, column=0, sticky="nw", pady=(6, 0))
         self.t_desc = tk.Text(f, width=50, height=5, wrap="word", relief="flat", bd=0, highlightthickness=1, highlightbackground="#d1d1d6", highlightcolor="#0071e3", padx=8, pady=6)
-        self.t_desc.grid(row=2, column=1, sticky="ew", padx=(10, 0), pady=(6, 3))
+        self.t_desc.grid(row=3, column=1, sticky="ew", padx=(10, 0), pady=(6, 3))
         ttk.Label(f, foreground="#555", wraplength=420, justify="left",
                   text="Un proyecto está en UN solo correo; un correo puede tener varios proyectos. "
                        "Puedes cambiarlo después desde la ficha del proyecto."
-                  ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
-        self.botones(f, "Crear proyecto", self._ok).grid(row=4, column=0, columnspan=2, sticky="e", pady=(12, 0))
+                  ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        self.botones(f, "Crear proyecto", self._ok).grid(row=5, column=0, columnspan=2, sticky="e", pady=(12, 0))
         f.columnconfigure(1, weight=1)
         self.e_nombre.focus_set()
 
@@ -158,7 +162,7 @@ class NuevoProyectoDialog(Dialogo):
             messagebox.showwarning("Falta el nombre", "Escribe el nombre del proyecto.", parent=self)
             return
         self.aceptar({"nombre": self.v_nombre.get().strip(), "descripcion": self.t_desc.get("1.0", "end").strip(),
-                      "correo": self.etq.get(self.v_correo.get())})
+                      "correo": self.etq.get(self.v_correo.get()), "estado": self.v_estado.get()})
 
 
 class ConfigDialog(Dialogo):

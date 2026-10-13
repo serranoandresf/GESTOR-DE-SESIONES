@@ -11,9 +11,10 @@ from .almacen import Almacen
 from .config import Config
 from .dialogos import ConfigDialog, CuentaDialog, GruposDialog, NuevoProyectoDialog, etiqueta_correo
 from .ejemplo import crear_datos_ejemplo
-from .reglas import ErrorRegla, Servicio
+from .reglas import ESTADOS, ICONO_ESTADO, ErrorRegla, Servicio
 
 SIN_CORREO = "(sin correo)"
+TODOS = "Todos los estados"
 COLOR_GRIS = "#636366"
 COLOR_AVISO = "#9a4a08"
 PAPEL, SUPERFICIE, SUPERFICIE_2, SUPERFICIE_3 = "#f2f2f7", "#ffffff", "#f2f2f7", "#e5e5ea"
@@ -132,6 +133,10 @@ class App(tk.Tk):
                    foreground=[("disabled", COLOR_GRIS)], selectbackground=[("readonly", SUPERFICIE)],
                    selectforeground=[("readonly", TINTA)])
         st.configure("TCheckbutton", background=PAPEL)
+        st.configure("Estado.Toolbutton", background=SUPERFICIE, foreground=TINTA, bordercolor=BORDE, padding=(10, 5),
+                     relief="flat", anchor="center")
+        st.map("Estado.Toolbutton", background=[("selected", TINTA), ("active", SUPERFICIE_2)],
+               foreground=[("selected", "#ffffff")], bordercolor=[("selected", TINTA)])
         st.configure("TPanedwindow", background=BORDE)
         st.configure("Sash", sashthickness=1, background=BORDE)
         st.configure("TScrollbar", background=SUPERFICIE_3, troughcolor=PAPEL, bordercolor=PAPEL, arrowcolor=COLOR_GRIS)
@@ -168,6 +173,8 @@ class App(tk.Tk):
     def _panel_izq(self, f):
         f.config(width=380)
         ttk.Label(f, text="Correos y proyectos", font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        self.l_resumen = ttk.Label(f, foreground=COLOR_GRIS, wraplength=360, justify="left")
+        self.l_resumen.pack(anchor="w", pady=(2, 0))
         self.v_buscar = tk.StringVar()
         fila = ttk.Frame(f)
         fila.pack(fill="x", pady=(6, 6))
@@ -176,6 +183,13 @@ class App(tk.Tk):
         self.e_buscar.pack(side="left", fill="x", expand=True)
         ttk.Button(fila, text="✕", width=3, command=lambda: self.v_buscar.set("")).pack(side="left", padx=(4, 0))
         self.v_buscar.trace_add("write", lambda *a: self._refrescar_arbol())
+        fe = ttk.Frame(f)
+        fe.pack(fill="x", pady=(0, 6))
+        ttk.Label(fe, text="Mostrar:").pack(side="left", padx=(0, 6))
+        self.v_filtro = tk.StringVar(value=TODOS)
+        cb = ttk.Combobox(fe, textvariable=self.v_filtro, values=[TODOS] + ESTADOS, state="readonly", width=22)
+        cb.pack(side="left")
+        cb.bind("<<ComboboxSelected>>", lambda e: self._refrescar_arbol())
         marco = ttk.Frame(f)
         marco.pack(fill="both", expand=True)
         self.tree = ttk.Treeview(marco, show="tree", selectmode="browse")
@@ -184,11 +198,14 @@ class App(tk.Tk):
         self.tree.tag_configure("grupo", font=("Segoe UI", 10, "bold"))
         self.tree.tag_configure("libre", foreground=COLOR_GRIS)
         self.tree.tag_configure("sin_correo", foreground=COLOR_AVISO)
+        self.tree.tag_configure("completado", foreground=COLOR_GRIS)
+        self.tree.tag_configure("pausado", foreground=COLOR_AVISO)
         self.tree.pack(side="left", fill="both", expand=True)
         sb.pack(side="left", fill="y")
         self.tree.bind("<<TreeviewSelect>>", self._al_seleccionar)
         ttk.Label(f, foreground="#666", wraplength=350, justify="left",
-                  text="✉ correo (n = proyectos; en gris, sin proyectos) · 📁 proyecto").pack(anchor="w", pady=(6, 0))
+                  text="✉ correo (n = proyectos; en gris, sin proyectos)  ·  ○ por empezar  ● en curso  ⏸ pausado  ✔ completado"
+                  ).pack(anchor="w", pady=(6, 0))
 
     def _vista_vacia(self, padre):
         f = ttk.Frame(padre)
@@ -209,14 +226,26 @@ class App(tk.Tk):
         self.c_correo.grid(row=2, column=1, sticky="ew", padx=(12, 0), pady=4)
         self.l_aviso_p = ttk.Label(f, foreground=COLOR_AVISO, wraplength=520, justify="left")
         self.l_aviso_p.grid(row=3, column=1, sticky="w", padx=(12, 0))
-        ttk.Label(f, text="De qué se trata").grid(row=4, column=0, sticky="nw", pady=(10, 4))
-        m1, self.t_desc = _texto_con_scroll(f, 6)
-        m1.grid(row=4, column=1, sticky="nsew", padx=(12, 0), pady=(10, 4))
-        ttk.Label(f, text="Notas").grid(row=5, column=0, sticky="nw", pady=(6, 4))
-        m2, self.t_notas = _texto_con_scroll(f, 9)
-        m2.grid(row=5, column=1, sticky="nsew", padx=(12, 0), pady=(6, 4))
+        ttk.Label(f, text="Estado").grid(row=4, column=0, sticky="w", pady=(10, 4))
+        self.v_estado = tk.StringVar(value=ESTADOS[1])
+        fe = ttk.Frame(f)
+        fe.grid(row=4, column=1, sticky="w", padx=(12, 0), pady=(10, 4))
+        for e in ESTADOS:
+            ttk.Radiobutton(fe, text=f"{ICONO_ESTADO[e]} {e}", value=e, variable=self.v_estado,
+                            style="Estado.Toolbutton").pack(side="left", padx=(0, 4))
+        ttk.Label(f, text="Próximo paso").grid(row=5, column=0, sticky="w", pady=4)
+        self.v_paso = tk.StringVar()
+        ttk.Entry(f, textvariable=self.v_paso).grid(row=5, column=1, sticky="ew", padx=(12, 0), pady=4)
+        ttk.Label(f, text="De qué se trata").grid(row=6, column=0, sticky="nw", pady=(10, 4))
+        m1, self.t_desc = _texto_con_scroll(f, 5)
+        m1.grid(row=6, column=1, sticky="nsew", padx=(12, 0), pady=(10, 4))
+        ttk.Label(f, text="Notas").grid(row=7, column=0, sticky="nw", pady=(6, 4))
+        m2, self.t_notas = _texto_con_scroll(f, 7)
+        m2.grid(row=7, column=1, sticky="nsew", padx=(12, 0), pady=(6, 4))
+        self.l_act = ttk.Label(f, foreground=COLOR_GRIS)
+        self.l_act.grid(row=8, column=1, sticky="w", padx=(12, 0))
         fila = ttk.Frame(f)
-        fila.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        fila.grid(row=9, column=0, columnspan=2, sticky="ew", pady=(10, 0))
         self.b_guardar = ttk.Button(fila, text="Guardar cambios  (Ctrl+S)", command=self.accion_guardar, style="Accent.TButton")
         self.b_guardar.pack(side="left")
         self.b_descartar = ttk.Button(fila, text="↺ Descartar", command=self.accion_descartar)
@@ -224,10 +253,12 @@ class App(tk.Tk):
         self.l_sucio = ttk.Label(fila, foreground=COLOR_AVISO)
         self.l_sucio.pack(side="left", padx=8)
         ttk.Button(fila, text="🗑 Eliminar proyecto", command=self.accion_eliminar_proyecto).pack(side="right")
+        self.b_completar = ttk.Button(fila, text="✔ Marcar completado", command=self.accion_alternar_completado)
+        self.b_completar.pack(side="right", padx=6)
         f.columnconfigure(1, weight=1)
-        f.rowconfigure(4, weight=1)
-        f.rowconfigure(5, weight=2)
-        for var in (self.v_nombre, self.v_correo_p):
+        f.rowconfigure(6, weight=1)
+        f.rowconfigure(7, weight=2)
+        for var in (self.v_nombre, self.v_correo_p, self.v_estado, self.v_paso):
             var.trace_add("write", lambda *a: self._cambio_en_ficha())
         for t in (self.t_desc, self.t_notas):
             t.bind("<<Modified>>", self._texto_modificado)
@@ -252,7 +283,7 @@ class App(tk.Tk):
         self.l_sub_c = ttk.Label(f, foreground="#555")
         self.l_sub_c.pack(anchor="w", pady=(0, 10))
         ttk.Label(f, text="Proyectos de este correo (haz clic en uno para abrirlo):").pack(anchor="w")
-        m, self.t_proy_c = self._tabla(f, [("proyecto", "Proyecto"), ("desc", "De qué se trata")], [200, 420])
+        m, self.t_proy_c = self._tabla(f, [("proyecto", "Proyecto"), ("estado", "Estado"), ("desc", "De qué se trata / próximo paso")], [190, 110, 340])
         m.pack(fill="both", expand=True, pady=(4, 8))
         self.t_proy_c.bind("<<TreeviewSelect>>", lambda e: self._abrir_desde_tabla(self.t_proy_c, "p:"))
         fila = ttk.Frame(f)
@@ -273,7 +304,7 @@ class App(tk.Tk):
         self.l_tit_g.pack(anchor="w")
         self.l_sub_g = ttk.Label(f, foreground="#555")
         self.l_sub_g.pack(anchor="w", pady=(0, 10))
-        m, self.t_cor_g = self._tabla(f, [("correo", "Correo"), ("n", "Proyectos"), ("clave", "Contraseña")], [330, 90, 110])
+        m, self.t_cor_g = self._tabla(f, [("correo", "Correo"), ("n", "Proyectos"), ("act", "En curso"), ("clave", "Contraseña")], [310, 80, 80, 110])
         m.pack(fill="both", expand=True, pady=(0, 8))
         self.t_cor_g.bind("<<TreeviewSelect>>", lambda e: self._abrir_desde_tabla(self.t_cor_g, "c:"))
         ttk.Button(f, text="➕ Correo nuevo en este grupo", command=self.accion_correo_en_grupo).pack(anchor="w")
@@ -328,19 +359,33 @@ class App(tk.Tk):
         f = self.v_buscar.get().strip().lower()
         self.tree.delete(*self.tree.get_children())
 
+        filtro = self.v_filtro.get()
+        r = self.srv.resumen()
+        pe = r["por_estado"]
+        self.l_resumen.config(text=f"{r['correos']} correos · {r['proyectos']} proyectos\n"
+                                   f"● {pe['En curso']} en curso   ○ {pe['Por empezar']} por empezar   "
+                                   f"⏸ {pe['Pausado']} pausados   ✔ {pe['Completado']} completados")
+
+        def estado_ok(pn):
+            return filtro == TODOS or ind["proyectos"][pn]["estado"] == filtro
+
         def coincide(pn):
             p = ind["proyectos"][pn]
-            return f in f"{pn} {p['descripcion']} {p['notas']}".lower()
+            return f in f"{pn} {p['descripcion']} {p['notas']} {p['proximo_paso']}".lower()
+
+        def etiqueta(pn):
+            e = ind["proyectos"][pn]["estado"]
+            return f"{ICONO_ESTADO[e]} {pn}", {"Completado": ("completado",), "Pausado": ("pausado",)}.get(e, ())
 
         for gn, cuentas in ind["grupos"]:
             hijos = []
             for c in cuentas:
                 nombres = ind["por_correo"].get(c["correo"].lower(), [])
                 c_ok = (not f) or f in c["correo"].lower() or f in gn.lower()
-                vis = nombres if c_ok else [pn for pn in nombres if coincide(pn)]
-                if c_ok or vis:
+                vis = [pn for pn in (nombres if c_ok else [pn for pn in nombres if coincide(pn)]) if estado_ok(pn)]
+                if (c_ok and filtro == TODOS) or vis:
                     hijos.append((c, nombres, vis))
-            if f and not hijos:
+            if (f or filtro != TODOS) and not hijos:
                 continue
             gid = f"g:{gn}"
             self.tree.insert("", "end", gid, open=True, tags=("grupo",), text=f"{gn}  ({len(cuentas)} correos)")
@@ -349,12 +394,13 @@ class App(tk.Tk):
                 self.tree.insert(gid, "end", cid, open=bool(vis), tags=() if nombres else ("libre",),
                                  text=f"✉ {c['correo']}" + (f"   ({len(nombres)})" if nombres else ""))
                 for pn in vis:
-                    self.tree.insert(cid, "end", f"p:{pn}", text=f"📁 {pn}")
-        sueltos = [pn for pn in ind["sin_correo"] if (not f) or coincide(pn)]
+                    txt, tg = etiqueta(pn)
+                    self.tree.insert(cid, "end", f"p:{pn}", tags=tg, text=txt)
+        sueltos = [pn for pn in ind["sin_correo"] if ((not f) or coincide(pn)) and estado_ok(pn)]
         if sueltos:
             self.tree.insert("", "end", "raiz_s", open=True, tags=("grupo", "sin_correo"), text="📂 SIN CORREO ASIGNADO")
             for pn in sueltos:
-                self.tree.insert("raiz_s", "end", f"p:{pn}", tags=("sin_correo",), text=f"📁 {pn}")
+                self.tree.insert("raiz_s", "end", f"p:{pn}", tags=("sin_correo",), text=etiqueta(pn)[0])
         if self.sel and self.tree.exists(self.sel):
             self.tree.selection_set(self.sel)
             self.tree.see(self.sel)
@@ -362,6 +408,8 @@ class App(tk.Tk):
             self.sel = None
         if f:
             self.msg(f"🔍 Mostrando lo que coincide con «{self.v_buscar.get().strip()}».")
+        elif filtro != TODOS:
+            self.msg(f"Mostrando solo proyectos «{filtro}».")
 
     def _al_seleccionar(self, _e=None):
         s = self.tree.selection()
@@ -436,7 +484,7 @@ class App(tk.Tk):
     def _cargar_proyecto(self, nombre):
         p = self.ind["proyectos"][nombre]
         self.proy_actual = nombre
-        self.l_tit_p.config(text=f"📁 {nombre}")
+        self.l_tit_p.config(text=f"{ICONO_ESTADO[p['estado']]} {nombre}")
         self.v_nombre.set(nombre)
         ops = self._opciones_correo()
         self.etq_correo = dict(ops)
@@ -446,6 +494,10 @@ class App(tk.Tk):
         self.v_correo_p.set(marca)
         self.l_aviso_p.config(text=(f"Su correo anterior ({actual}) ya no está registrado. Elige otro."
                                     if actual and marca == SIN_CORREO else ""))
+        self.v_estado.set(p["estado"])
+        self.v_paso.set(p.get("proximo_paso", ""))
+        self.l_act.config(text=f"Última actualización: {p['actualizado']}" if p.get("actualizado") else "")
+        self.b_completar.config(text="↺ Reabrir (En curso)" if p["estado"] == "Completado" else "✔ Marcar completado")
         self._poner_texto(self.t_desc, p.get("descripcion"))
         self._poner_texto(self.t_notas, p.get("notas"))
         self._mostrar(self.f_proyecto)
@@ -459,8 +511,10 @@ class App(tk.Tk):
         self.l_sub_c.config(text=f"{grupo}  ·  {len(nombres)} proyecto{'s' if len(nombres) != 1 else ''}  ·  {clave}")
         self.t_proy_c.delete(*self.t_proy_c.get_children())
         for pn in nombres:
-            d = self.ind["proyectos"][pn]["descripcion"].replace("\n", " ")
-            self.t_proy_c.insert("", "end", f"p:{pn}", values=(pn, d[:110] + ("…" if len(d) > 110 else "")))
+            pr = self.ind["proyectos"][pn]
+            d = (pr["descripcion"] + (f"  →  {pr['proximo_paso']}" if pr["proximo_paso"] else "")).replace("\n", " ")
+            self.t_proy_c.insert("", "end", f"p:{pn}", values=(pn, f"{ICONO_ESTADO[pr['estado']]} {pr['estado']}",
+                                                               d[:110] + ("…" if len(d) > 110 else "")))
         self.b_copiar_clave.config(state="normal" if self.srv.tiene_clave(c) else "disabled")
         self._mostrar(self.f_correo)
         self.msg(f"✉ {correo}")
@@ -471,9 +525,10 @@ class App(tk.Tk):
         self.l_sub_g.config(text=f"{len(cuentas)} correo{'s' if len(cuentas) != 1 else ''}  ·  haz clic en uno para abrirlo")
         self.t_cor_g.delete(*self.t_cor_g.get_children())
         for c in cuentas:
-            n = len(self.ind["por_correo"].get(c["correo"].lower(), []))
+            nombres = self.ind["por_correo"].get(c["correo"].lower(), [])
+            act = sum(1 for pn in nombres if self.ind["proyectos"][pn]["estado"] == "En curso")
             self.t_cor_g.insert("", "end", f"c:{grupo}|{c['correo']}",
-                                values=(c["correo"], n, "🔑 sí" if self.srv.tiene_clave(c) else "—"))
+                                values=(c["correo"], len(nombres), act, "🔑 sí" if self.srv.tiene_clave(c) else "—"))
         self._mostrar(self.f_grupo)
         self.msg(grupo)
 
@@ -504,7 +559,8 @@ class App(tk.Tk):
         try:
             self.srv.actualizar_proyecto(
                 self.proy_actual, nuevo_nombre=nuevo, descripcion=self.t_desc.get("1.0", "end"),
-                notas=self.t_notas.get("1.0", "end"), correo=self.etq_correo.get(self.v_correo_p.get()))
+                notas=self.t_notas.get("1.0", "end"), correo=self.etq_correo.get(self.v_correo_p.get()),
+                estado=self.v_estado.get(), proximo_paso=self.v_paso.get())
         except ErrorRegla as e:
             messagebox.showwarning("No se pudo guardar", str(e), parent=self)
             return False
@@ -521,6 +577,14 @@ class App(tk.Tk):
     def accion_guardar(self):
         if self._sucio:
             self._guardar_proyecto()
+
+    @seguro
+    def accion_alternar_completado(self):
+        """Atajo: completado ↔ en curso, y guarda la ficha en el momento."""
+        if not self.proy_actual:
+            return
+        self.v_estado.set("En curso" if self.v_estado.get() == "Completado" else "Completado")
+        self._guardar_proyecto()
 
     @seguro
     def accion_descartar(self):
@@ -630,7 +694,7 @@ class App(tk.Tk):
         d = NuevoProyectoDialog(self, self.srv, correo_pre).mostrar()
         if not d:
             return
-        self.srv.crear_proyecto(d["nombre"], d["descripcion"], d["correo"])
+        self.srv.crear_proyecto(d["nombre"], d["descripcion"], d["correo"], estado=d["estado"])
         self.v_buscar.set("")
         self.sel = f"p:{d['nombre']}"
         self.refrescar_todo()

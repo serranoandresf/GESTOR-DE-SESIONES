@@ -2,7 +2,8 @@
 
 Qué guarda la app:
   - Grupos de correos (Grupo 1, Grupo 2…) y, dentro de cada uno, los correos (con contraseña opcional).
-  - Proyectos: nombre, de qué se trata, notas y el correo con el que se trabajan.
+  - Proyectos: nombre, estado (por empezar, en curso, pausado, completado), de qué se trata, próximo paso, notas
+    y el correo con el que se trabajan.
 
 Reglas que se hacen cumplir:
   1. Un proyecto está en UN solo correo; un correo puede tener varios proyectos.
@@ -13,10 +14,27 @@ La app no se conecta a ninguna IA ni a internet.
 """
 import csv
 import os
+from datetime import date
 
 from . import secretos as secretos_win
 
 _NADA = object()          # "no cambiar" (None significa «sin correo»)
+
+ESTADOS = ["Por empezar", "En curso", "Pausado", "Completado"]
+ESTADO_INICIAL = "En curso"
+ICONO_ESTADO = {"Por empezar": "○", "En curso": "●", "Pausado": "⏸", "Completado": "✔"}
+
+
+def normalizar_estado(texto, defecto=ESTADO_INICIAL):
+    """Acepta mayúsculas/minúsculas/acentos y sinónimos comunes; si no lo reconoce devuelve `defecto`."""
+    t = (texto or "").strip().lower()
+    t = t.translate(str.maketrans("áéíóú", "aeiou"))
+    mapa = {"por empezar": "Por empezar", "pendiente": "Por empezar", "nuevo": "Por empezar",
+            "en curso": "En curso", "activo": "En curso", "en proceso": "En curso", "en progreso": "En curso",
+            "pausado": "Pausado", "en pausa": "Pausado", "detenido": "Pausado",
+            "completado": "Completado", "terminado": "Completado", "finalizado": "Completado", "listo": "Completado",
+            "hecho": "Completado"}
+    return mapa.get(t, defecto)
 
 
 class ErrorRegla(Exception):
@@ -49,6 +67,9 @@ class Servicio:
         p.setdefault("descripcion", "")
         p.setdefault("notas", "")
         p.setdefault("correo", None)
+        p["estado"] = normalizar_estado(p.get("estado"))      # los proyectos de versiones anteriores quedan «En curso»
+        p.setdefault("proximo_paso", "")
+        p.setdefault("actualizado", "")
         return p
 
     def indice(self):
@@ -69,6 +90,16 @@ class Servicio:
             else:
                 sin_correo.append(pn)
         return {"grupos": grupos, "proyectos": proyectos, "por_correo": por_correo, "sin_correo": sin_correo}
+
+    def resumen(self):
+        """Cuenta correos, proyectos y proyectos por estado (para el encabezado)."""
+        ind = self.indice()
+        por_estado = {e: 0 for e in ESTADOS}
+        for p in ind["proyectos"].values():
+            por_estado[p["estado"]] += 1
+        return {"correos": sum(len(c) for _, c in ind["grupos"]), "proyectos": len(ind["proyectos"]),
+                "por_estado": por_estado, "sin_correo": len(ind["sin_correo"]),
+                "correos_libres": sum(1 for _, cs in ind["grupos"] for c in cs if c["correo"].lower() not in ind["por_correo"])}
 
     def buscar_cuenta(self, correo: str):
         """(nombre_grupo, cuenta) del correo, o None. Sin distinguir mayúsculas."""
@@ -210,7 +241,14 @@ class Servicio:
                              "o el dato está dañado). Escríbela de nuevo con ✏ Editar correo.")
 
     # ------------------------------------------------------------ proyectos
-    def crear_proyecto(self, nombre: str, descripcion: str = "", correo: str | None = None, notas: str = ""):
+    @staticmethod
+    def _validar_estado(estado):
+        if estado not in ESTADOS:
+            raise ErrorRegla("El estado debe ser uno de: " + ", ".join(ESTADOS) + ".")
+        return estado
+
+    def crear_proyecto(self, nombre: str, descripcion: str = "", correo: str | None = None, notas: str = "",
+                       estado: str = ESTADO_INICIAL, proximo_paso: str = ""):
         nombre = nombre.strip()
         if not nombre:
             raise ErrorRegla("El proyecto necesita un nombre.")
@@ -221,13 +259,17 @@ class Servicio:
             if not hallado:
                 raise ErrorRegla(f"{correo} no está registrado en tus correos.")
             correo = hallado[1]["correo"]
-        p = {"nombre": nombre, "descripcion": descripcion.strip(), "notas": notas.strip(), "correo": correo or None}
+        p = {"nombre": nombre, "descripcion": descripcion.strip(), "notas": notas.strip(), "correo": correo or None,
+             "estado": self._validar_estado(estado), "proximo_paso": (proximo_paso or "").strip(),
+             "actualizado": date.today().isoformat()}
         self.alm.guardar_proyecto(p)
         return p
 
     def actualizar_proyecto(self, nombre: str, nuevo_nombre: str | None = None, descripcion: str | None = None,
-                            notas: str | None = None, correo=_NADA):
-        """Cambia nombre, descripción, notas y/o correo (correo=None lo deja sin correo). Valida todo antes de escribir."""
+                            notas: str | None = None, correo=_NADA, estado: str | None = None,
+                            proximo_paso: str | None = None):
+        """Cambia nombre, estado, descripción, próximo paso, notas y/o correo (correo=None lo deja sin correo).
+        Valida todo antes de escribir y anota la fecha de la última actualización."""
         p = self.proyecto(nombre)
         nuevo = (nuevo_nombre if nuevo_nombre is not None else nombre).strip()
         if not nuevo:
@@ -241,10 +283,15 @@ class Servicio:
                     raise ErrorRegla(f"{correo} no está registrado en tus correos.")
                 correo = hallado[1]["correo"]
             p["correo"] = correo or None
+        if estado is not None:
+            p["estado"] = self._validar_estado(estado)
+        if proximo_paso is not None:
+            p["proximo_paso"] = proximo_paso.strip()
         if descripcion is not None:
             p["descripcion"] = descripcion.strip()
         if notas is not None:
             p["notas"] = notas.strip()
+        p["actualizado"] = date.today().isoformat()
         self.alm.respaldar_proyecto(nombre)
         p["nombre"] = nuevo
         viejo = self.alm.ruta_proyecto(nombre)
@@ -264,27 +311,28 @@ class Servicio:
 
     # ------------------------------------------------------------- exportar
     def filas_lista(self):
-        """Una fila por proyecto (y una por correo sin proyectos): Grupo, Correo, Proyecto, De qué se trata, Notas."""
+        """Una fila por proyecto (y una por correo sin proyectos): Grupo, Correo, Proyecto, Estado, De qué se trata,
+        Próximo paso, Notas."""
         ind = self.indice()
         filas = []
         for gn, cuentas in ind["grupos"]:
             for c in cuentas:
                 nombres = ind["por_correo"].get(c["correo"].lower(), [])
                 if not nombres:
-                    filas.append([gn, c["correo"], "", "", ""])
+                    filas.append([gn, c["correo"], "", "", "", "", ""])
                 for pn in nombres:
                     p = ind["proyectos"][pn]
-                    filas.append([gn, c["correo"], pn, p["descripcion"], p["notas"]])
+                    filas.append([gn, c["correo"], pn, p["estado"], p["descripcion"], p["proximo_paso"], p["notas"]])
         for pn in ind["sin_correo"]:
             p = ind["proyectos"][pn]
-            filas.append(["", "", pn, p["descripcion"], p["notas"]])
+            filas.append(["", "", pn, p["estado"], p["descripcion"], p["proximo_paso"], p["notas"]])
         return filas
 
     def exportar_csv(self, ruta):
         """CSV con ';' y UTF-8 con BOM: se abre directo en Excel (configuración regional en español)."""
         with open(ruta, "w", encoding="utf-8-sig", newline="") as f:
             w = csv.writer(f, delimiter=";")
-            w.writerow(["Grupo", "Correo", "Proyecto", "De qué se trata", "Notas"])
+            w.writerow(["Grupo", "Correo", "Proyecto", "Estado", "De qué se trata", "Próximo paso", "Notas"])
             w.writerows(self.filas_lista())
 
     def importar_csv(self, ruta):
@@ -305,6 +353,7 @@ class Servicio:
         def col(prefijo):
             return next((i for i, x in enumerate(enc) if x.startswith(prefijo)), -1)
         iG, iC, iP, iD, iN = col("grupo"), col("correo"), col("proyecto"), col("de qu"), col("notas")
+        iE, iS = col("estado"), next((i for i, x in enumerate(enc) if x.replace("ó", "o").startswith("proximo")), -1)
         if iC < 0 or iP < 0:
             raise ErrorRegla("No parece la lista exportada: faltan las columnas Correo y Proyecto.")
         get = lambda r, i: (r[i].strip() if 0 <= i < len(r) else "")
@@ -320,14 +369,17 @@ class Servicio:
                     nuevos_c += 1
             if not p:
                 continue
-            d, n = get(r, iD), get(r, iN)
+            d, n, paso = get(r, iD), get(r, iN), get(r, iS)
+            est = get(r, iE)
             if self.alm.existe_proyecto(p):
                 actual = self.proyecto(p)
                 self.actualizar_proyecto(p, descripcion=d or actual.get("descripcion", ""),
-                                         notas=n or actual.get("notas", ""), correo=(c or actual.get("correo") or None))
+                                         notas=n or actual.get("notas", ""), correo=(c or actual.get("correo") or None),
+                                         estado=normalizar_estado(est, actual["estado"]) if est else None,
+                                         proximo_paso=paso or actual.get("proximo_paso", ""))
                 actualizados += 1
             else:
-                self.crear_proyecto(p, d, c or None, n)
+                self.crear_proyecto(p, d, c or None, n, estado=normalizar_estado(est), proximo_paso=paso)
                 nuevos_p += 1
         return nuevos_c, nuevos_p, actualizados
 

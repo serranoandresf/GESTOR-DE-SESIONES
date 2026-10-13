@@ -89,6 +89,7 @@ h2.pg{font-size:28px;font-weight:800;letter-spacing:-.035em;line-height:1.12;mar
 .btn.ic-only{padding:0;width:38px}
 .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:var(--s2);color:var(--mu);font-size:12px;font-weight:650;white-space:nowrap;box-shadow:inset 0 0 0 1px var(--bd)}
 .chip.wn{color:var(--wn);background:color-mix(in srgb,var(--wn) 14%,var(--s1));box-shadow:none}
+.chip.ac{color:var(--accent-tx);background:color-mix(in srgb,var(--accent) 12%,var(--s1));box-shadow:none}
 .chip.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--s1));box-shadow:none}
 
 label.lb{display:block;font-size:12.5px;font-weight:600;color:var(--mu);margin:0 0 4px}
@@ -100,11 +101,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .qa .ic{color:var(--mu)}
 .qa input{flex:1;min-width:0;margin:0;padding:0;min-height:42px;background:transparent!important;border:0!important}
 
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:6px 0}
-.stats div{padding:10px 16px;border-left:1px solid var(--bd)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:6px 0}
+.stats div{padding:10px 12px 10px 14px;border-left:1px solid var(--bd)}
 .stats div:first-child{border-left:0}
-.stats b{display:block;font-size:30px;font-weight:800;letter-spacing:-.05em;line-height:1.05;font-variant-numeric:tabular-nums}
-.stats span{font-size:12px;color:var(--mu);font-weight:600}
+.stats b{display:block;font-size:26px;font-weight:800;letter-spacing:-.05em;line-height:1.05;font-variant-numeric:tabular-nums}
+.stats span{font-size:11.5px;color:var(--mu);font-weight:600}
 
 .grupo{margin:24px 2px 8px;font-size:13px;font-weight:700;color:var(--mu);letter-spacing:.02em}
 .chead{display:flex;align-items:center;gap:10px;padding:13px 14px 13px 16px}
@@ -119,6 +120,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .empty h3{font-size:18px;margin:10px 0 6px;letter-spacing:-.02em}
 .empty .big{width:56px;height:56px;border-radius:18px;background:var(--s3);display:grid;place-items:center;margin:0 auto;color:var(--mu)}
 .empty .big .ic{width:26px;height:26px}
+.seg{display:flex;gap:2px;padding:3px;border-radius:14px;background:var(--s3);margin:12px 0 4px;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:1;min-height:36px;padding:0 12px;border:0;border-radius:11px;background:transparent;color:var(--mu);font-size:13.5px;font-weight:650;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--s1);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.seg.big{display:grid;grid-template-columns:1fr 1fr;overflow:visible}
+.seg.big button{min-height:42px;padding:0 8px;font-size:14px}
+.paso{color:var(--accent-tx);font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--sab) + 16px);transform:translate(-50%,12px);background:var(--tx);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:40;max-width:90%;text-align:center}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 @media (min-width:900px){#toast{bottom:28px}}
@@ -161,8 +169,24 @@ let vista = "correos";      // correos | proyectos | ajustes | form
 let q = "";
 let editando;               // nombre del proyecto en el formulario (null = nuevo)
 
+const ESTADOS = ["Por empezar","En curso","Pausado","Completado"];
+const ICO = {"Por empezar":"○","En curso":"●","Pausado":"⏸","Completado":"✔"};
+const CLASE = {"Por empezar":"","En curso":"ac","Pausado":"wn","Completado":"ok"};
+function normEstado(t){
+  t=String(t||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const m={"por empezar":"Por empezar","pendiente":"Por empezar","nuevo":"Por empezar","en curso":"En curso","activo":"En curso","en proceso":"En curso","en progreso":"En curso","pausado":"Pausado","en pausa":"Pausado","detenido":"Pausado","completado":"Completado","terminado":"Completado","finalizado":"Completado","listo":"Completado","hecho":"Completado"};
+  return m[t]||"En curso";
+}
+const hoy = () => new Date().toLocaleDateString("en-CA");
+let fe = "";                // filtro por estado ("" = todos)
 function cargar(){
-  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d && d.grupos && d.proyectos) return d; }catch(e){}
+  try{
+    const d = JSON.parse(localStorage.getItem(KEY));
+    if(d && d.grupos && d.proyectos){
+      d.proyectos.forEach(p=>{ p.estado=normEstado(p.estado); p.paso=p.paso||""; p.act=p.act||""; });   // datos de la versión anterior
+      return d;
+    }
+  }catch(e){}
   return {grupos:[], proyectos:[]};
 }
 function guardar(){ try{ localStorage.setItem(KEY, JSON.stringify(D)); }catch(e){ aviso("No pude guardar en este navegador"); } }
@@ -200,38 +224,39 @@ function toCSV(filas){
 function importar(txt){
   const filas = parseCSV(txt);
   if(filas.length<2) throw new Error("El archivo está vacío");
-  const enc = filas[0].map(x=>x.trim().toLowerCase());
+  const sinAcento = t => t.normalize("NFD").replace(/[̀-ͯ]/g,"");
+  const enc = filas[0].map(x=>sinAcento(x.trim().toLowerCase()));
   const ix = n => enc.findIndex(x=>x.startsWith(n));
-  const iG=ix("grupo"), iC=ix("correo"), iP=ix("proyecto"), iD=ix("de qu"), iN=ix("notas");
+  const iG=ix("grupo"), iC=ix("correo"), iP=ix("proyecto"), iE=ix("estado"), iD=ix("de que"), iS=ix("proximo"), iN=ix("notas");
   if(iC<0||iP<0) throw new Error("No parece la lista exportada (faltan las columnas Correo y Proyecto)");
-  const grupos=[], proyectos=[], gi={};
+  const get=(r,i)=>i>=0?(r[i]||"").trim():"";
+  const grupos=[], proyectos=[], gi={}, hoyS=hoy();
   for(const r of filas.slice(1)){
-    const g=(r[iG]||"").trim(), c=(r[iC]||"").trim(), p=(r[iP]||"").trim();
+    const g=get(r,iG), c=get(r,iC), p=get(r,iP);
     if(c){
       const gn=g||"Sin grupo";
       if(!gi[gn]){ gi[gn]={nombre:gn,correos:[]}; grupos.push(gi[gn]); }
-      if(!gi[gn].correos.some(x=>x.toLowerCase()===c.toLowerCase())) gi[gn].correos.push(c);
+      if(!gi[gn].correos.some(x=>mismo(x,c))) gi[gn].correos.push(c);
     }
-    if(p && !proyectos.some(x=>x.nombre.toLowerCase()===p.toLowerCase()))
-      proyectos.push({nombre:p, correo:c, desc:(r[iD]||"").trim(), notas:(r[iN]||"").trim()});
+    if(p && !proyectos.some(x=>mismo(x.nombre,p)))
+      proyectos.push({nombre:p, correo:c, estado:normEstado(get(r,iE)), desc:get(r,iD), paso:get(r,iS), notas:get(r,iN), act:hoyS});
   }
   D={grupos,proyectos}; guardar();
   return {correos:grupos.reduce((a,g)=>a+g.correos.length,0), proyectos:proyectos.length};
 }
 function exportar(){
-  const filas=[["Grupo","Correo","Proyecto","De qué se trata","Notas"]];
+  const filas=[["Grupo","Correo","Proyecto","Estado","De qué se trata","Próximo paso","Notas"]];
   for(const g of D.grupos) for(const c of g.correos){
-    const ps=D.proyectos.filter(p=>p.correo.toLowerCase()===c.toLowerCase());
-    if(!ps.length) filas.push([g.nombre,c,"","",""]);
-    ps.forEach(p=>filas.push([g.nombre,c,p.nombre,p.desc,p.notas]));
+    const ps=proyectosDe(c);
+    if(!ps.length) filas.push([g.nombre,c,"","","","",""]);
+    ps.forEach(p=>filas.push([g.nombre,c,p.nombre,p.estado,p.desc,p.paso,p.notas]));
   }
-  D.proyectos.filter(p=>!todosCorreos().some(c=>c.toLowerCase()===p.correo.toLowerCase())).forEach(p=>filas.push(["","",p.nombre,p.desc,p.notas]));
+  sinCorreo().forEach(p=>filas.push(["","",p.nombre,p.estado,p.desc,p.paso,p.notas]));
   const blob=new Blob([toCSV(filas)],{type:"text/csv;charset=utf-8"});
   const file=new File([blob],"mis_correos_y_proyectos.csv",{type:"text/csv"});
   if(navigator.canShare && navigator.canShare({files:[file]})) navigator.share({files:[file]}).catch(()=>{});
   else { const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=file.name; a.click(); }
 }
-
 /* ---------- Portapapeles ---------- */
 async function copiar(t){
   try{ await navigator.clipboard.writeText(t); aviso("Copiado: "+t); }
@@ -267,65 +292,85 @@ function vacio(){
     <button class="btn" id="imp0" style="margin-top:8px">${ic("down")}Elegir archivo .csv</button></div>`;
   $("#imp0").onclick=()=>$("#file").click();
 }
+const chipEstado = p => `<span class="chip ${CLASE[p.estado]}">${ICO[p.estado]} ${p.estado}</span>`;
+function filtroSeg(){
+  const op=[["","Todos"]].concat(ESTADOS.map(e=>[e,e]));
+  const n=e=>e?D.proyectos.filter(p=>p.estado===e).length:D.proyectos.length;
+  return `<div class="seg" role="group" aria-label="Filtrar por estado">`+op.map(([v,t])=>`<button data-fe="${esc(v)}" aria-pressed="${fe===v}">${t} · ${n(v)}</button>`).join("")+`</div>`;
+}
+function enlazarFiltro(redibujar){
+  document.querySelectorAll("[data-fe]").forEach(b=>b.onclick=()=>{ fe=b.dataset.fe; redibujar(); });
+}
 function filaProyecto(p, conCorreo){
-  return `<button class="item" data-p="${esc(p.nombre)}"><span class="grow"><span class="t1">${esc(p.nombre)}</span><span class="t2">${esc(p.desc||"Sin descripción")}</span></span>${conCorreo?`<span class="chip ${p.correo&&todosCorreos().some(c=>mismo(c,p.correo))?"":"wn"}">${esc(p.correo&&todosCorreos().some(c=>mismo(c,p.correo))?p.correo.split("@")[0]:"Sin correo")}</span>`:""}<svg class="ic go"><use href="#i-right"/></svg></button>`;
+  const ok=p.correo&&todosCorreos().some(c=>mismo(c,p.correo));
+  return `<button class="item" data-p="${esc(p.nombre)}"><span class="grow"><span class="t1">${esc(p.nombre)}</span>${p.paso?`<span class="paso">→ ${esc(p.paso)}</span>`:""}<span class="t2">${conCorreo?`✉ ${esc(ok?p.correo:"Sin correo")} · `:""}${esc(p.desc||"Sin descripción")}</span></span>${chipEstado(p)}<svg class="ic go"><use href="#i-right"/></svg></button>`;
 }
 function enlazarLista(){
   const m=$("#main");
   m.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>copiar(b.dataset.cp));
   m.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ editando=b.dataset.p; ir("form"); });
 }
+const primera = (h,i) => i? h : h.replace('class="item"','class="item" style="border-top:0"');
 function correos(){
   if(!D.grupos.length && !D.proyectos.length) return vacio();
   const ql=q.trim().toLowerCase(), coincide=(...t)=>!ql||t.join(" ").toLowerCase().includes(ql);
-  const ncor=todosCorreos().length, vacios=todosCorreos().filter(c=>!proyectosDe(c).length).length;
+  const ncor=todosCorreos().length, activos=D.proyectos.filter(p=>p.estado==="En curso").length;
+  const libres=todosCorreos().filter(c=>!proyectosDe(c).some(p=>p.estado==="En curso")).length;
   let h=`<h2 class="pg">Correos</h2>
-    <div class="card stats"><div><b>${ncor}</b><span>correos</span></div><div><b>${D.proyectos.length}</b><span>proyectos</span></div><div><b>${vacios}</b><span>sin proyecto</span></div></div>`+buscador();
+    <div class="card stats"><div><b>${ncor}</b><span>correos</span></div><div><b>${activos}</b><span>en curso</span></div><div><b>${D.proyectos.filter(p=>p.estado==="Completado").length}</b><span>completados</span></div><div><b>${libres}</b><span>libres</span></div></div>`+buscador()+filtroSeg();
   let hay=false;
   for(const g of D.grupos){
     let bloque="";
     for(const c of g.correos){
-      const ps=proyectosDe(c), vis=ps.filter(p=>coincide(c,p.nombre,p.desc,p.notas,g.nombre));
+      const ps=proyectosDe(c).filter(p=>!fe||p.estado===fe), vis=ps.filter(p=>coincide(c,p.nombre,p.desc,p.paso,p.notas,g.nombre));
+      if(fe && !ps.length) continue;
       if(ql && !vis.length && !coincide(c)) continue;
-      const lista=(ql&&!coincide(c))?vis:ps;
-      bloque+=`<div class="card pad0"><div class="chead"><span class="em">${esc(c)}</span><span class="chip" title="Proyectos">${ps.length}</span><button class="btn s sm ic-only" data-cp="${esc(c)}" aria-label="Copiar ${esc(c)}">${ic("copy")}</button></div>`+
-        (lista.length?lista.map(p=>filaProyecto(p,false)).join(""):`<div class="none">Sin proyectos</div>`)+`</div>`;
+      const lista=(ql&&!coincide(c))?vis:ps, total=proyectosDe(c).length;
+      bloque+=`<div class="card pad0"><div class="chead"><span class="em">${esc(c)}</span><span class="chip" title="Proyectos">${total}</span><button class="btn s sm ic-only" data-cp="${esc(c)}" aria-label="Copiar ${esc(c)}">${ic("copy")}</button></div>`+
+        (lista.length?lista.map(p=>filaProyecto(p,false)).join(""):`<div class="none">Sin proyectos · correo libre</div>`)+`</div>`;
     }
     if(bloque){ hay=true; h+=`<div class="grupo">${esc(g.nombre)}</div>`+bloque; }
   }
-  const huer=sinCorreo().filter(p=>coincide(p.nombre,p.desc,p.notas));
-  if(huer.length){ hay=true; h+=`<div class="grupo">Sin correo asignado</div><div class="card pad0">${huer.map((p,i)=>filaProyecto(p,false).replace('class="item"',i?'class="item"':'class="item" style="border-top:0"')).join("")}</div>`; }
-  if(!hay) h+=`<p class="mu" style="text-align:center;margin-top:30px">No encontré nada con “${esc(q)}”.</p>`;
-  $("#main").innerHTML=h; enlazarBuscador(correos); enlazarLista();
+  const huer=sinCorreo().filter(p=>(!fe||p.estado===fe)&&coincide(p.nombre,p.desc,p.paso,p.notas));
+  if(huer.length){ hay=true; h+=`<div class="grupo">Sin correo asignado</div><div class="card pad0">${huer.map((p,i)=>primera(filaProyecto(p,false),i)).join("")}</div>`; }
+  if(!hay) h+=`<p class="mu" style="text-align:center;margin-top:30px">${ql?`No encontré nada con “${esc(q)}”.`:"No hay proyectos con ese estado."}</p>`;
+  $("#main").innerHTML=h; enlazarBuscador(correos); enlazarFiltro(correos); enlazarLista();
 }
 function proyectos(){
   if(!D.grupos.length && !D.proyectos.length) return vacio();
   const ql=q.trim().toLowerCase();
-  const ps=D.proyectos.filter(p=>!ql||[p.nombre,p.correo,p.desc,p.notas].join(" ").toLowerCase().includes(ql)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
-  let h=`<h2 class="pg">Proyectos</h2><p class="mu" style="margin:2px 2px 0">${D.proyectos.length} en total, ordenados por nombre.</p>`+buscador();
-  h+= ps.length ? `<div class="card pad0">${ps.map((p,i)=>filaProyecto(p,true).replace('class="item"',i?'class="item"':'class="item" style="border-top:0"')).join("")}</div>`
-                : `<p class="mu" style="text-align:center;margin-top:30px">No encontré nada con “${esc(q)}”.</p>`;
-  $("#main").innerHTML=h; enlazarBuscador(proyectos); enlazarLista();
+  const ps=D.proyectos.filter(p=>(!fe||p.estado===fe)&&(!ql||[p.nombre,p.correo,p.desc,p.paso,p.notas].join(" ").toLowerCase().includes(ql)))
+    .sort((a,b)=>((a.estado==="Completado")-(b.estado==="Completado"))||a.nombre.localeCompare(b.nombre,"es"));
+  let h=`<h2 class="pg">Proyectos</h2><p class="mu" style="margin:2px 2px 0">${D.proyectos.length} en total · los completados van al final.</p>`+buscador()+filtroSeg();
+  h+= ps.length ? `<div class="card pad0">${ps.map((p,i)=>primera(filaProyecto(p,true),i)).join("")}</div>`
+                : `<p class="mu" style="margin-top:30px;text-align:center">${ql?`No encontré nada con “${esc(q)}”.`:"No hay proyectos con ese estado."}</p>`;
+  $("#main").innerHTML=h; enlazarBuscador(proyectos); enlazarFiltro(proyectos); enlazarLista();
 }
 function formulario(nombre){
-  const nuevo=nombre==null, p=nuevo?{nombre:"",correo:"",desc:"",notas:""}:D.proyectos.find(x=>x.nombre===nombre);
+  const nuevo=nombre==null, p=nuevo?{nombre:"",correo:"",estado:"En curso",desc:"",paso:"",notas:"",act:""}:D.proyectos.find(x=>x.nombre===nombre);
   if(!p){ vista="proyectos"; return pintar(); }
+  let est=p.estado;
   const ops='<option value="">(Sin correo asignado)</option>'+D.grupos.map(g=>`<optgroup label="${esc(g.nombre)}">`+g.correos.map(c=>`<option value="${esc(c)}" ${mismo(c,p.correo)?"selected":""}>${esc(c)}</option>`).join("")+`</optgroup>`).join("");
   $("#main").innerHTML=`<div class="row" style="margin:2px 0 6px"><button class="btn t sm" id="atras" style="padding-left:0">${ic("left")}Volver</button></div>
     <h2 class="pg">${nuevo?"Nuevo proyecto":esc(p.nombre)}</h2>
+    ${nuevo?"":`<p class="mu" style="margin:2px 2px 0">${chipEstado(p)} ${p.act?` · actualizado ${esc(p.act)}`:""}</p>`}
     <div class="card" style="margin-top:14px">
+      <label class="lb">Estado</label>
+      <div class="seg big" id="f_e" style="margin-top:0;margin-bottom:12px">${ESTADOS.map(e=>`<button data-e="${e}" aria-pressed="${e===est}">${ICO[e]} ${e}</button>`).join("")}</div>
       <label class="lb" for="f_n">Proyecto</label><input id="f_n" value="${esc(p.nombre)}" placeholder="Nombre del proyecto">
       <label class="lb" for="f_c">Correo donde se trabaja</label><select id="f_c">${ops}</select>
+      <label class="lb" for="f_s">Próximo paso</label><input id="f_s" value="${esc(p.paso)}" placeholder="Lo siguiente que hay que hacer">
       <label class="lb" for="f_d">De qué se trata</label><textarea id="f_d">${esc(p.desc)}</textarea>
       <label class="lb" for="f_t">Notas</label><textarea id="f_t">${esc(p.notas)}</textarea>
       <div class="row" style="margin-top:6px"><button class="btn grow" id="gu">Guardar</button>${nuevo?"":`<button class="btn d" id="el">${ic("trash")}Eliminar</button>`}</div>
     </div>`;
+  document.querySelectorAll("#f_e button").forEach(b=>b.onclick=()=>{ est=b.dataset.e; document.querySelectorAll("#f_e button").forEach(x=>x.setAttribute("aria-pressed",x===b)); });
   $("#atras").onclick=()=>ir("proyectos");
   $("#gu").onclick=()=>{
     const n=$("#f_n").value.trim();
     if(!n) return aviso("Ponle un nombre al proyecto");
     if(D.proyectos.some(x=>x!==p && mismo(x.nombre,n))) return aviso("Ya existe un proyecto con ese nombre");
-    p.nombre=n; p.correo=$("#f_c").value; p.desc=$("#f_d").value.trim(); p.notas=$("#f_t").value.trim();
+    p.nombre=n; p.estado=est; p.correo=$("#f_c").value; p.paso=$("#f_s").value.trim(); p.desc=$("#f_d").value.trim(); p.notas=$("#f_t").value.trim(); p.act=hoy();
     if(nuevo) D.proyectos.push(p);
     guardar(); aviso("Guardado"); ir("proyectos");
   };

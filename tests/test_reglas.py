@@ -184,10 +184,10 @@ class TestIndiceYExportar(Base):
         txt = ruta.read_bytes()
         self.assertTrue(txt.startswith(b"\xef\xbb\xbf"))             # BOM para Excel
         lineas = txt.decode("utf-8-sig").splitlines()
-        self.assertEqual(lineas[0], "Grupo;Correo;Proyecto;De qué se trata;Notas")
-        self.assertIn("Grupo 1;cuenta1a@ejemplo.com;Tienda online;Venta de productos por internet: catálogo, pagos y envíos.;", lineas)
-        self.assertIn("Grupo 1;cuenta1b@ejemplo.com;;;", lineas)   # correo sin proyectos
-        self.assertIn(";;Suelto;sin correo;", lineas)               # proyecto sin correo
+        self.assertEqual(lineas[0], "Grupo;Correo;Proyecto;Estado;De qué se trata;Próximo paso;Notas")
+        self.assertIn("Grupo 1;cuenta1a@ejemplo.com;Tienda online;En curso;Venta de productos por internet: catálogo, pagos y envíos.;;", lineas)
+        self.assertIn("Grupo 1;cuenta1b@ejemplo.com;;;;;", lineas)   # correo sin proyectos
+        self.assertIn(";;Suelto;En curso;sin correo;;", lineas)               # proyecto sin correo
 
 
 class TestLote(Base):
@@ -276,6 +276,43 @@ class ImportarCsv(unittest.TestCase):
         self.csv.write_text("a;b\n1;2\n", encoding="utf-8")
         with self.assertRaises(ErrorRegla):
             self.s.importar_csv(self.csv)
+
+
+class Estados(Base):
+    def test_por_defecto_y_cambio(self):
+        self.assertEqual(self.s.proyecto("Tienda online")["estado"], "En curso")
+        self.s.actualizar_proyecto("Tienda online", estado="Completado", proximo_paso="  Cobrar la factura ")
+        p = self.s.proyecto("Tienda online")
+        self.assertEqual((p["estado"], p["proximo_paso"]), ("Completado", "Cobrar la factura"))
+        self.assertTrue(p["actualizado"])
+        self.assertEqual(self.s.resumen()["por_estado"]["Completado"], 1)
+
+    def test_estado_invalido(self):
+        with self.assertRaises(ErrorRegla):
+            self.s.actualizar_proyecto("Tienda online", estado="Quien sabe")
+        with self.assertRaises(ErrorRegla):
+            self.s.crear_proyecto("Nuevo", estado="x")
+
+    def test_proyecto_antiguo_sin_estado(self):
+        p = self.s.alm.cargar_proyecto("Tienda online")
+        p.pop("estado", None)
+        self.s.alm.guardar_proyecto(p)
+        self.assertEqual(self.s.proyecto("Tienda online")["estado"], "En curso")
+
+    def test_normalizar(self):
+        from gestor_sesiones.reglas import normalizar_estado as n
+        self.assertEqual(n(" TERMINADO "), "Completado")
+        self.assertEqual(n("en pausa"), "Pausado")
+        self.assertEqual(n("", "Pausado"), "Pausado")
+
+    def test_csv_ida_y_vuelta(self):
+        self.s.actualizar_proyecto("Tienda online", estado="Pausado", proximo_paso="Elegir pasarela")
+        ruta = Path(self.tmp.name) / "l.csv"
+        self.s.exportar_csv(ruta)
+        otro = Servicio(Almacen(Path(self.tmp.name) / "otro"), None, secretos=FakeSecretos())
+        otro.importar_csv(ruta)
+        p = otro.proyecto("Tienda online")
+        self.assertEqual((p["estado"], p["proximo_paso"]), ("Pausado", "Elegir pasarela"))
 
 
 if __name__ == "__main__":
